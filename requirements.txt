@@ -1,0 +1,3 @@
+# This specifies what Python modules need to be installed to use this program
+# Use `pip install -r requirements.txt` to install these modules
+praw == 7.0
