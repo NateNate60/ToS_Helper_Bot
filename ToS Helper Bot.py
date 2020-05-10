@@ -101,7 +101,7 @@ def check_triggers(crt, time, c, b):
     # c is the comment itself.
     
     # Use if, not elif, because we want the bot to be able to trigger more than once.
-    
+
     # THESE TRIGGERS IN THIS FIRST IF STATEMENT WILL GO ONLY IF SUMMONED.
     if "what is" in b or "what's" in b or "!def" in b :
         if "vfr" in b :
@@ -200,7 +200,7 @@ def run_bot(r, chknum=config.chknum, tick=config.tick):
                 and not c.archived \
                 and ("what is" in b or "what's" in b or "!def" in b):
             crt = check_triggers(crt, now, c, b)
-    
+
     # Same thing as above, but checks posts instead of comments.
     for post in r.subreddit('TownofSalemgame').new(limit=chknum):
         
@@ -266,6 +266,10 @@ if __name__ == "__main__":
         except Exception as ex:
             print(now + ":", "Exception when running tick", tick)
             print(ex)
+
+        if tick == 17280:
+            # Empty the dictionary every 24 hours
+            submitters = {}
 
         # This keeps track of and reports how many cycles the bot's gone through, but with decreasing frequency because
         # it's less likely to crash the longer it's been running.
