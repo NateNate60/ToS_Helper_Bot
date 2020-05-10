@@ -245,6 +245,10 @@ while True :
     run_bot()
     tick += 1
     
+    if tick == 17280 :
+        #Empty the dictionary every 24 hours
+        submitters = {}
+    
     # This keeps track of and reports how many cycles the bot's gone through, but with decreasing frequency because it's less likely to crash
     # the longer it's been running.
     if tick == 1 :
