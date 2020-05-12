@@ -43,7 +43,8 @@ def get_comment_list():
 def write_comment_list(id, comments_replied_to):
     comments_replied_to.append(id)
     with open('comments.txt','w') as f :
-        f.write(comments_replied_to)
+        for i in comments_replied_to :
+            f.write(i + '\n')
     return comments_replied_to
 
 
