@@ -264,10 +264,12 @@ if __name__ == "__main__":
         now = get_time()
         try:
             run_bot(r, tick=tick)
+          
+        ''' I don't like that this doesn't tell me where the exception is. I prefer it to just halt because that has saved me from spam so many times
         except Exception as ex:
             print(now + ":", "Exception when running tick", tick)
             print(ex)
-
+        '''
         if tick == 17280:
             # Empty the dictionary every 24 hours
             submitters = {}
