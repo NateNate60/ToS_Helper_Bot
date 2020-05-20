@@ -59,21 +59,21 @@ def get_time() :
 def check_author(crt, now, post):
 
     # We keep track of submitters with a dictionary stored in a JSON file.
-    with open('submitters.txt') as s:
+    with open('submitters.json') as s:
         global submitters
         submitters = json.load(s)
     
     # If the author is in the dictionary (they've posted something already today), increment their value by 1
-    if post.author.name() in submitters:
-        submitters[post.author.name()] += 1
+    if post.author.name in submitters:
+        submitters[post.author.name] += 1
         
     # If the author is NOT in the dictionary (they have NOT posted today), add them to the dictionary and set their
     # value to 1.
     else:
-        submitters[post.author.name()] = 1
+        submitters[post.author.name] = 1
     
     # If they've posted MORE than the max posts per day, remove their post.
-    if submitters[post.author.name()] > config.max_posts:
+    if submitters[post.author.name] > config.max_posts:
         post.mod.remove()
         post.reply("Unfortunately, your post has been removed because to prevent queue-flooding, we only allow " +
                    str(max) + " posts per person per day." + config.signature)
@@ -81,7 +81,7 @@ def check_author(crt, now, post):
         # Distinguish and stick the bot's reply.
         # If you all can find a more efficient way to do this that'd be great
         for comment in post.comments :
-            if comment.author.name() == r.user.me() and "Unfortunately, your p" in comment.body.lower() :
+            if comment.author.name == r.user.me() and "Unfortunately, your p" in comment.body.lower() :
                 comment.mod.distinguish(how='yes', sticky=True)
                 comment.mod.lock()
     
@@ -251,27 +251,31 @@ def run_bot(r, chknum=config.chknum, tick=config.tick):
     time.sleep(5)
 
 
-if __name__ == "__main__":
+while True :
     print("Starting ToS Helper Bot version " + version)
     r = login()
     # Check up to the last 1000 comments to avoid missing any comments that were made during downtime.
     tick = config.tick
     if tick == 0:
-        run_bot(r, chknum=1000)
+        run_bot(r, chknum=10)
     # Run the bot forever
     while True:
         tick += 1
         now = get_time()
-        try:
-            run_bot(r, tick=tick)
+        
+        run_bot(r, tick=tick)
+          
+        '''
+        I don't like that this doesn't tell me where the exception is. I prefer it to just halt because that has saved me from spam so many times
+
         except Exception as ex:
             print(now + ":", "Exception when running tick", tick)
             print(ex)
-
+        
         if tick == 17280:
             # Empty the dictionary every 24 hours
             submitters = {}
-
+        '''
         # This keeps track of and reports how many cycles the bot's gone through, but with decreasing frequency because
         # it's less likely to crash the longer it's been running.
         if tick == 1:
