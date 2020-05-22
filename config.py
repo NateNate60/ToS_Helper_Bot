@@ -32,4 +32,5 @@ client_secret = "It's important that I keep this a... secret. Because it's the c
 # Where is the bot installed to? Where did you git clone the repo to?
 # This is needed because to run the bot as a service in systemd, absolute file paths are required.
 # If you neglect to change this, FileNotFoundError will be raised and the bot will fail.
-workingdir = '/thb'
+# YES THE SLASH AT THE END IS NEEDED. IT DOESN'T WORK WITHOUT IT
+workingdir = '/thb/'
