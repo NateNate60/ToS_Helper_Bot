@@ -4,6 +4,8 @@ import time
 import datetime
 import json
 
+wpath = config.workingdir
+
 version = "b0.1"
 
 # Originally, in SUEB and WPB, several settings would be changed in the actual code
@@ -30,7 +32,7 @@ def login():
 
 # This function fecthes the list of comments the bot has already replied to from the respective file.
 def get_comment_list():
-    with open ("comments.txt", "r") as f :
+    with open (wpath + "comments.txt", "r") as f :
         comments_replied_to = f.read()
         comments_replied_to = comments_replied_to.split("\n")
     comments_replied_to = list(filter(None, comments_replied_to))
@@ -42,7 +44,7 @@ def get_comment_list():
 # get_comment_list().
 def write_comment_list(id, comments_replied_to):
     comments_replied_to.append(id)
-    with open('comments.txt','w') as f :
+    with open(wpath + 'comments.txt','w') as f :
         for i in comments_replied_to :
             f.write(i + '\n')
     return comments_replied_to
@@ -59,7 +61,7 @@ def get_time() :
 def check_author(crt, now, post):
 
     # We keep track of submitters with a dictionary stored in a JSON file.
-    with open('submitters.json') as s:
+    with open(wpath + 'submitters.json') as s:
         global submitters
         submitters = json.load(s)
     
@@ -86,7 +88,7 @@ def check_author(crt, now, post):
                 comment.mod.lock()
     
     # Write the dictionary of submitters back into the JSON file
-    with open('submitters.json', 'w') as s:
+    with open(wpath + 'submitters.json', 'w') as s:
         json.dump(submitters, s)
 
     return write_comment_list(post.id, crt)
