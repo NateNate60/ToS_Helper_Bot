@@ -91,11 +91,14 @@ def check_author(crt, now, post):
     with open(wpath + 'submitters.json', 'w') as s:
         json.dump(submitters, s)
 
-    return write_comment_list(post.id, crt)
+    write_comment_list(post.id, crt)
 
 
 # A list of triggers for the bot.
 def check_triggers(crt, time, c, b):
+    check_author(crt, time, c)
+    #print("Checking triggers for " + c.name)
+    
     # Here, we use the well-established and respected technique of chaining together millions of if statements to
     # simulate artificial intelligence.
     # Seriously, we just use if statements to check if any triggers are in the comment.
@@ -168,13 +171,12 @@ def check_triggers(crt, time, c, b):
                 " it out. Further information is available [here]" +
                 "(https://www.blankmediagames.com/phpbb/viewtopic.php?f=11&t=107706)." +
                 config.signature)
-
-    return crt
+        crt = write_comment_list(c.id, crt)
 
 
 # And now, the meat of the bot.
 def run_bot(r, chknum=config.chknum, tick=config.tick):
-
+    #print ("Running bot") #Left over from debugging
     now = get_time()
     crt = get_comment_list()
     
@@ -202,17 +204,19 @@ def run_bot(r, chknum=config.chknum, tick=config.tick):
                 and not c.locked \
                 and not c.archived \
                 and ("what is" in b or "what's" in b or "!def" in b):
-            crt = check_triggers(crt, now, c, b)
+            crt = get_comment_list()
+            check_triggers(crt, now, c, b)
 
     # Same thing as above, but checks posts instead of comments.
     for post in r.subreddit('TownofSalemgame').new(limit=chknum):
-        
+        #print(post.title) #Leftover from debugging
         # BESIDES the first time when it checks 1000 posts, check if the poster is posting too much
-        if post.id not in crt and tick != 0 :
-            crt = check_author(crt, now, post)
+        if post.id not in crt and tick != 50:
+            crt = get_comment_list()
+            check_triggers(crt,now,post,post.selftext.lower())
     
     # Check the inbox for any direct requests (people summoning the bot by pinging it).
-    for message in r.inbox.mentions() :
+    for message in r.inbox.all() :
         # Check only unread mentions. That way, we don't have to keep track of what we've already checked. Reddit will
         # do that for us.
         if message.new:
@@ -237,7 +241,7 @@ def run_bot(r, chknum=config.chknum, tick=config.tick):
                               " this annoying and would rather not have me reply to anything you say, simply comment" +
                               "`!blacklist` and I will ignore your comments." +
                               config.signature)
-            
+                print(now + ": " + message.author.name + " ran !info")
             # The bot will not check its own comments for triggers.
             elif message.parent().author.name != r.user.me().name :
                 # Check the parent comment for triggers.
@@ -253,42 +257,41 @@ def run_bot(r, chknum=config.chknum, tick=config.tick):
     time.sleep(5)
 
 
-while True :
-    print("Starting ToS Helper Bot version " + version)
-    r = login()
-    # Check up to the last 1000 comments to avoid missing any comments that were made during downtime.
-    tick = config.tick
-    if tick == 0:
-        run_bot(r, chknum=10)
-    # Run the bot forever
-    while True:
-        tick += 1
-        now = get_time()
-        
-        run_bot(r, tick=tick)
-          
-        '''
-        I don't like that this doesn't tell me where the exception is. I prefer it to just halt because that has saved me from spam so many times
+print("Starting ToS Helper Bot version " + version)
+r = login()
+# Check up to the last 1000 comments to avoid missing any comments that were made during downtime.
+tick = config.tick
+if tick == 0:
+    run_bot(r, chknum=10)
+# Run the bot forever
+while True:
+    tick += 1
+    now = get_time()
+    
+    run_bot(r, tick)
+      
+    '''
+    I don't like that this doesn't tell me where the exception is. I prefer it to just halt because that has saved me from spam so many times
 
-        except Exception as ex:
-            print(now + ":", "Exception when running tick", tick)
-            print(ex)
-        
-        if tick == 17280:
-            # Empty the dictionary every 24 hours
-            submitters = {}
-        '''
-        # This keeps track of and reports how many cycles the bot's gone through, but with decreasing frequency because
-        # it's less likely to crash the longer it's been running.
-        if tick == 1:
-            print(now + ":", "The bot has successfully completed one cycle.")
-        elif tick == 5:
-            print(now + ":", 'The bot has successfully completed 5 cycles.')
-        elif tick%10 == 0 and tick < 100:
-            print(now + ":", 'The bot has successfully completed', tick, "cycles.")
-        elif tick%100 == 0 and tick < 500:
-            print(now + ":", 'The bot has successfully completed', tick, "cycles.")
-        elif tick%500 == 0 and tick < 3000:
-            print(now + ":", 'The bot has successfully completed', tick, "cycles.")
-        elif tick%1000 == 0:
-            print(now + ":", 'The bot has successfully completed', tick, "cycles.")
+    except Exception as ex:
+        print(now + ":", "Exception when running tick", tick)
+        print(ex)
+    
+    if tick == 17280:
+        # Empty the dictionary every 24 hours
+        submitters = {}
+    '''
+    # This keeps track of and reports how many cycles the bot's gone through, but with decreasing frequency because
+    # it's less likely to crash the longer it's been running.
+    if tick == 1:
+        print(now + ":", "The bot has successfully completed one cycle.")
+    elif tick == 5:
+        print(now + ":", 'The bot has successfully completed 5 cycles.')
+    elif tick%10 == 0 and tick < 100:
+        print(now + ":", 'The bot has successfully completed', tick, "cycles.")
+    elif tick%100 == 0 and tick < 500:
+        print(now + ":", 'The bot has successfully completed', tick, "cycles.")
+    elif tick%500 == 0 and tick < 3000:
+        print(now + ":", 'The bot has successfully completed', tick, "cycles.")
+    elif tick%1000 == 0:
+        print(now + ":", 'The bot has successfully completed', tick, "cycles.")
