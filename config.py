@@ -28,3 +28,8 @@ client_id = "An-f7DowBxxuVw"
 
 # What's the client_secret?
 client_secret = "It's important that I keep this a... secret. Because it's the client_secret, obviously."
+
+# Where is the bot installed to? Where did you git clone the repo to?
+# This is needed because to run the bot as a service in systemd, absolute file paths are required.
+# If you neglect to change this, FileNotFoundError will be raised and the bot will fail.
+workingdir = '/thb'
