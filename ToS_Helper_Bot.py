@@ -6,7 +6,7 @@ import json
 
 wpath = config.workingdir
 
-version = "b0.1"
+version = "1.0"
 
 # Originally, in SUEB and WPB, several settings would be changed in the actual code
 # rather than in the config file, against common coding practice. Now, I'm just going to put those
