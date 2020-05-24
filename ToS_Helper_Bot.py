@@ -77,15 +77,10 @@ def check_author(crt, now, post):
     # If they've posted MORE than the max posts per day, remove their post.
     if submitters[post.author.name] > config.max_posts:
         post.mod.remove()
+        print (now + ": Removed post " + post.id + " by " + post.author.name + ". They posted " + str(submitters[post.author.name]) + " times today.")
         post.reply("Unfortunately, your post has been removed because to prevent queue-flooding, we only allow " +
-                   str(max) + " posts per person per day." + config.signature)
+                   str(config.max_posts) + " posts per person per day." + config.signature).mod.distinguish(sticky=True)
         
-        # Distinguish and stick the bot's reply.
-        # If you all can find a more efficient way to do this that'd be great
-        for comment in post.comments :
-            if comment.author.name == r.user.me() and "Unfortunately, your p" in comment.body.lower() :
-                comment.mod.distinguish(how='yes', sticky=True)
-                comment.mod.lock()
     
     # Write the dictionary of submitters back into the JSON file
     with open(wpath + 'submitters.json', 'w') as s:
@@ -243,10 +238,12 @@ def run_bot(r, chknum=config.chknum, tick=config.tick):
                               config.signature)
                 print(now + ": " + message.author.name + " ran !info")
             # The bot will not check its own comments for triggers.
-            elif message.parent().author.name != r.user.me().name :
-                # Check the parent comment for triggers.
-                check_triggers(chknum, now, message.parent(), message.parent().body.lower())
-            
+            try :
+                if message.parent().author.name != r.user.me().name :
+                    # Check the parent comment for triggers.
+                    check_triggers(chknum, now, message.parent(), message.parent().body.lower())
+            except AttributeError :
+                pass
             # REGARDLESS of whether we found any triggers or now, the message will be marked as read so we don't check
             # it again.
             message.mark_read()
@@ -261,13 +258,13 @@ print("Starting ToS Helper Bot version " + version)
 r = login()
 # Check up to the last 1000 comments to avoid missing any comments that were made during downtime.
 tick = config.tick
-if tick == 0:
-    run_bot(r, chknum=10)
+#if tick == 0:
+#    run_bot(r, chknum=10)
 # Run the bot forever
 while True:
     tick += 1
     now = get_time()
-    
+    crt = get_comment_list()
     run_bot(r, tick)
       
     '''
@@ -276,11 +273,11 @@ while True:
     except Exception as ex:
         print(now + ":", "Exception when running tick", tick)
         print(ex)
-    
-    if tick == 17280:
+    '''
+    if tick%17280 == 0 :
         # Empty the dictionary every 24 hours
         submitters = {}
-    '''
+    
     # This keeps track of and reports how many cycles the bot's gone through, but with decreasing frequency because
     # it's less likely to crash the longer it's been running.
     if tick == 1:
