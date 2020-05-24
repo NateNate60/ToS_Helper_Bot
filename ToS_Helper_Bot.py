@@ -274,7 +274,7 @@ while True:
         print(now + ":", "Exception when running tick", tick)
         print(ex)
     '''
-    if tick%17280 == 0 :
+    if int(time.time())%86400 > 5 :
         # Empty the dictionary every 24 hours
         submitters = {}
     
