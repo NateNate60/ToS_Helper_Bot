@@ -117,7 +117,17 @@ def check_triggers(crt, time, c, b):
             crt = write_comment_list(c.id, crt)
     
     # ANYTHING BELOW THIS LINE WILL TRIGGER REGARDLESS OF WHETHER THE BOT WAS INTENTIONALLY SUMMONED OR NOT
-    
+    if "!rate" in b :
+        payload = b.split(' ')
+        
+        if len(payload) == 2 :
+            print (time + ": " + c.author.name + " queried " + payload[1] + "'s rate limit.")
+            c.reply(payload[1] + " has submitted " + submitters[payload[1]] " posts today. Once they post " + str(config.max_posts) + 
+                    " posts, subsequent posts will be removed. This resets at midnight UTC." + config.signature)
+        if len(payload) == 1 :
+            print (time + ": " + c.author.name + " queried their rate limit.")
+            c.reply("You've posted " + submitters[c.author.name] + " times today. Once you post " + str(config.max_posts) + 
+                    " posts, subsequent posts will be removed. This resets at midnight UTC." + config.signature)
     # This rather long line checks for "new" and "player" in the title, OR "noob" and something else that says the OP
     # is the noob.
     if "new" in c.name.lower() and "player" in c.name.lower()\
@@ -137,7 +147,6 @@ def check_triggers(crt, time, c, b):
                 '[Frequently Asked Questions](https://www.reddit.com/r/TownofSalemgame/wiki/faq)' +
                 'and the ["Is is against the rules?"](https://www.redd.it/fucmif?sort=qa) thread.' +
                 config.signature)
-        crt = write_comment_list(c.id, crt)
     if "freez" in c.name.lower()\
             or "lag" in c.name.lower()\
             or "disconnect" in c.name.lower()\
@@ -157,7 +166,6 @@ def check_triggers(crt, time, c, b):
                 "The game doesn't deal with packet loss that well. This can occasionally happen even on strong Wi-Fi"
                 + " or cellular connections." +
                 config.signature)
-        crt = write_comment_list(c.id, crt)
     if "flash" in c.name.lower() or "flash" in b:
         print (time + ": " + c.author.name + "queried for Flash.")
         c.reply("If you're asking about what will happen when Google Chrome and Mozilla Firefox drop support for" +
@@ -166,7 +174,7 @@ def check_triggers(crt, time, c, b):
                 " it out. Further information is available [here]" +
                 "(https://www.blankmediagames.com/phpbb/viewtopic.php?f=11&t=107706)." +
                 config.signature)
-        crt = write_comment_list(c.id, crt)
+    crt = write_comment_list(c.id, crt)
 
 
 # And now, the meat of the bot.
