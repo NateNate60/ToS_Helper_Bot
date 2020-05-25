@@ -105,6 +105,21 @@ def help_submission(s, body):
                         " a lot more than evils." +
                         settings.signature)
 
+    if "!rate" in b:
+        payload = b.split(' ')
+        if len(payload) == 2:
+            log("User", s.author.name, "asked for the rate limit of user", payload[1])
+            if not settings.read_only:
+                s.reply(payload[1] + " has submitted " + str(get_daily_post_count(payload[1])) + " posts today."
+                        "Once they post " + str(settings.max_posts) + " posts, subsequent posts will be removed."
+                        "This resets at midnight UTC." + settings.signature)
+        elif len(payload) == 1:
+            log("User", s.author.name, "asked for their rate limit")
+            if not settings.read_only:
+                s.reply("You've posted " + str(get_daily_post_count(s.author.name)) + " times today. Once you post " +
+                        str(settings.max_posts) + " posts, subsequent posts will be removed."
+                        "This resets at midnight UTC." + settings.signature)
+
     if "new" in b and "player" in b or ("noob" in b and ("player" in b or "here" in b or "'m" in b or "im" in b)):
         log("User", s.author.name, "appears to be a new player in submission", s.id)
         if not settings.read_only:
@@ -232,6 +247,19 @@ def check_author(post):
                 post.reply("Unfortunately, your post has been removed because to prevent queue-flooding, we only allow "
                            + str(settings.max_posts) + " posts per person per day." + settings.signature) \
                     .mod.distinguish(sticky=True)
+
+
+def get_daily_post_count(user):
+    with submitters:
+        cursor = submitters.execute("SELECT CASE WHEN date('now') == last_date THEN quantity ELSE 0 END FROM submitters"
+                                    " WHERE username=? LIMIT 1",
+                                    (user, ))
+        result = cursor.fetchone()
+        if result is None:
+            quantity = 0
+        else:
+            (quantity, ) = result
+        return quantity
 
 
 def get_comment_list():
