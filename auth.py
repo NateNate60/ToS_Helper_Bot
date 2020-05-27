@@ -1,4 +1,4 @@
-# This file contains autentication information.
+# This file contains authentication information.
 
 username = 'ToS_Helper_Bot'
 password = 'password'
