@@ -122,7 +122,7 @@ def check_triggers(crt, time, c, b):
         
         if len(payload) == 2 :
             print (time + ": " + c.author.name + " queried " + payload[1] + "'s rate limit.")
-            c.reply(payload[1] + " has submitted " + submitters[payload[1]] " posts today. Once they post " + str(config.max_posts) + 
+            c.reply(payload[1] + " has submitted " + submitters[payload[1]] + " posts today. Once they post " + str(config.max_posts) + 
                     " posts, subsequent posts will be removed. This resets at midnight UTC." + config.signature)
         if len(payload) == 1 :
             print (time + ": " + c.author.name + " queried their rate limit.")
@@ -178,7 +178,7 @@ def check_triggers(crt, time, c, b):
 
 
 # And now, the meat of the bot.
-def run_bot(r, chknum=config.chknum, tick=config.tick):
+def run_bot(r, chknum, tick=config.tick):
     #print ("Running bot") #Left over from debugging
     now = get_time()
     crt = get_comment_list()
@@ -199,7 +199,7 @@ def run_bot(r, chknum=config.chknum, tick=config.tick):
         if c.author not in config.banned and c.id not in crt and c.locked == False and c.archived == False : 
             check_triggers(chknum, time, c, b)
     '''
-
+    print ("Checking " + str(chknum) + " comments")
     for c in r.subreddit('TownofSalemgame').comments(limit=chknum):
         b = c.body.lower()
         if c.author not in config.blacklisted \
@@ -211,6 +211,7 @@ def run_bot(r, chknum=config.chknum, tick=config.tick):
             check_triggers(crt, now, c, b)
 
     # Same thing as above, but checks posts instead of comments.
+    print ("Checking", chknum, "posts")
     for post in r.subreddit('TownofSalemgame').new(limit=chknum):
         #print(post.title) #Leftover from debugging
         # BESIDES the first time when it checks 1000 posts, check if the poster is posting too much
@@ -273,7 +274,7 @@ while True:
     tick += 1
     now = get_time()
     crt = get_comment_list()
-    run_bot(r, tick)
+    run_bot(r, config.chknum, tick)
       
     '''
     I don't like that this doesn't tell me where the exception is. I prefer it to just halt because that has saved me from spam so many times
