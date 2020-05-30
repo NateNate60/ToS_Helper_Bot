@@ -289,6 +289,8 @@ while True:
     if int(time.time())%86400 > 5 :
         # Empty the dictionary every 24 hours
         submitters = {}
+        with open(wpath + 'submitters.json', 'w') as s:
+            json.dump(submitters, s)
     
     # This keeps track of and reports how many cycles the bot's gone through, but with decreasing frequency because
     # it's less likely to crash the longer it's been running.
