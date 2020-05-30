@@ -274,8 +274,11 @@ while True:
     tick += 1
     now = get_time()
     crt = get_comment_list()
-    run_bot(r, config.chknum, tick)
-      
+    try :
+        run_bot(r, config.chknum, tick)
+    except prawcore.exceptions.RequestException :
+    # In case it ever does encounter issues with Reddit's rate limit
+        time.sleep(60)
     '''
     I don't like that this doesn't tell me where the exception is. I prefer it to just halt because that has saved me from spam so many times
 
