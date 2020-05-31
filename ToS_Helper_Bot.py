@@ -166,14 +166,6 @@ def check_triggers(crt, time, c, b):
                 "The game doesn't deal with packet loss that well. This can occasionally happen even on strong Wi-Fi"
                 + " or cellular connections." +
                 config.signature)
-    if "flash" in c.name.lower() or "flash" in b:
-        print (time + ": " + c.author.name + "queried for Flash.")
-        c.reply("If you're asking about what will happen when Google Chrome and Mozilla Firefox drop support for" +
-                " Adobe Flash in December 2020, the developers are working on porting the game to the Unity engine." +
-                "\n\n The Unity engine is already available for the mobile and Steam versions, if you want to check" +
-                " it out. Further information is available [here]" +
-                "(https://www.blankmediagames.com/phpbb/viewtopic.php?f=11&t=107706)." +
-                config.signature)
     crt = write_comment_list(c.id, crt)
 
 
