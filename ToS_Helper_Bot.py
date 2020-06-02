@@ -191,7 +191,7 @@ def run_bot(r, chknum, tick=config.tick):
         if c.author not in config.banned and c.id not in crt and c.locked == False and c.archived == False : 
             check_triggers(chknum, time, c, b)
     '''
-    print ("Checking " + str(chknum) + " comments")
+    #print ("Checking " + str(chknum) + " comments")
     for c in r.subreddit('TownofSalemgame').comments(limit=chknum):
         b = c.body.lower()
         if c.author not in config.blacklisted \
@@ -203,7 +203,7 @@ def run_bot(r, chknum, tick=config.tick):
             check_triggers(crt, now, c, b)
 
     # Same thing as above, but checks posts instead of comments.
-    print ("Checking", chknum, "posts")
+    #print ("Checking", chknum, "posts")
     for post in r.subreddit('TownofSalemgame').new(limit=chknum):
         #print(post.title) #Leftover from debugging
         # BESIDES the first time when it checks 1000 posts, check if the poster is posting too much
