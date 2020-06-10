@@ -148,10 +148,10 @@ def check_triggers(crt, time, c, b):
                 '[Frequently Asked Questions](https://www.reddit.com/r/TownofSalemgame/wiki/faq)' +
                 'and the ["Is is against the rules?"](https://www.redd.it/fucmif?sort=qa) thread.' +
                 config.signature)
-    if "freez" in c.name.lower()\
+    if ("freez" in c.name.lower()\
             or "lag" in c.name.lower()\
             or "disconnect" in c.name.lower()\
-            or "dc" in c.name.lower() and c.link_flair_text.lower() == 'question':
+            or "dc" in c.name.lower()) and c.link_flair_text.lower() == 'question':
         print(time + ": " + c.author.name + " queried for freezing and lagging.")
         c.reply("If your game seizes and stops responding, try one of the following fixes. \n\n" +
                 "* ON BROWSER: Try resizing the browser window a few times. Nobody is quite sure why this works, but"
@@ -269,6 +269,8 @@ while True:
     crt = get_comment_list()
     try :
         run_bot(r, config.chknum, tick)
+    except pex.ServerError:
+        print (now + ": The bot received an HTTP 503 response and will now restart.")
     except pex.RequestException :
     # In case it ever does encounter issues with Reddit's rate limit
         time.sleep(60)
