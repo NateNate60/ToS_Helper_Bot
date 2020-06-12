@@ -148,7 +148,7 @@ def check_triggers(crt, time, c, b):
                 '[Frequently Asked Questions](https://www.reddit.com/r/TownofSalemgame/wiki/faq)' +
                 'and the ["Is is against the rules?"](https://www.redd.it/fucmif?sort=qa) thread.' +
                 config.signature)
-    if "pay" in c.name.lower() or "cost" in c.name.lower()) or "free" in c.name.lower() :
+    if "pay" in c.name.lower() or "cost" in c.name.lower() or "free" in c.name.lower() :
         print(time + ": " + c.author.name() + " queried for Pay to Play")
         c.reply("If you're asking about whether the game is still free to play, the developers [moved the game to Pay to Play](https://blankmediagames.com/phpbb/viewtopic.php?f=11&t=92848)" +
                 " in November of 2018 to combat a flood of people spamming meaningless messages in games and making new accounts to avoid bans. You can " +
