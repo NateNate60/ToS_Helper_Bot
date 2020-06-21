@@ -174,6 +174,11 @@ def check_triggers(crt, time, c, b):
                 "The game doesn't deal with packet loss that well. This can occasionally happen even on strong Wi-Fi"
                 + " or cellular connections." +
                 config.signature)
+    if "crash" in c.name.lower() or "error" in c.name.lower() or "bug" in c.name.lower() or "glitch" in c.name.lower() :
+        print(time + ": " + c.author.name + " queried for crashing.")
+        c.reply("If you're talking about an error in the game, please be aware that the developers no longer check this subreddit." +
+                " Please send bug reports to the developers on the official Town of Salem forums.\n\n [General bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=10) \n\n [Mobile bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=60)" +
+                "\n\n [Steam bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=78)" + config.signature)
     crt = write_comment_list(c.id, crt)
 
 
