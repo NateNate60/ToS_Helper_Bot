@@ -158,7 +158,7 @@ def check_triggers(crt, time, c, b):
     if ("freez" in c.name.lower()\
             or "lag" in c.name.lower()\
             or "disconnect" in c.name.lower()\
-            or "dc" in c.name.lower()) and c.link_flair_text.lower() == 'question':
+            or "dc" in c.name.lower()) and c.link_flair_text == 'Question':
         print(time + ": " + c.author.name + " queried for freezing and lagging.")
         c.reply("If your game seizes and stops responding, try one of the following fixes. \n\n" +
                 "* ON BROWSER: Try resizing the browser window a few times. Nobody is quite sure why this works, but"
