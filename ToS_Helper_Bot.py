@@ -105,6 +105,7 @@ def check_triggers(crt, time, c, b):
     # Use if, not elif, because we want the bot to be able to trigger more than once.
 
     # THESE TRIGGERS IN THIS FIRST IF STATEMENT WILL GO ONLY IF SUMMONED.
+    
     if "what is" in b or "what's" in b or "!def" in b :
         if "vfr" in b :
             print (time + ": " + c.author.name + " queried VFR.")
@@ -131,11 +132,11 @@ def check_triggers(crt, time, c, b):
                     " posts, subsequent posts will be removed. This resets at midnight UTC." + config.signature)
     # This rather long line checks for "new" and "player" in the title, OR "noob" and something else that says the OP
     # is the noob.
-    if "new" in c.name.lower() and "player" in c.name.lower()\
-            or ("noob" in c.name.lower() and ("player" in c.name.lower()
-                                              or "here" in c.name.lower()
-                                              or "'m" in c.name.lower()
-                                              or "im" in c.name.lower())):
+    if "new" in c.title.lower() and "player" in c.title.lower()\
+            or ("noob" in c.name.lower() and ("player" in c.title.lower()
+                                              or "here" in c.title.lower()
+                                              or "'m" in c.title.lower()
+                                              or "im" in c.title.lower())):
         print(time + ":", c.author.name, "queried new player.")
         
         # Also borrowed from Seth
@@ -148,17 +149,17 @@ def check_triggers(crt, time, c, b):
                 '[Frequently Asked Questions](https://www.reddit.com/r/TownofSalemgame/wiki/faq)' +
                 'and the ["Is is against the rules?"](https://www.redd.it/fucmif?sort=qa) thread.' +
                 config.signature)
-    if "pay" in c.name.lower() or "cost" in c.name.lower() or "free" in c.name.lower() :
-        print(time + ": " + c.author.name() + " queried for Pay to Play")
+    if "pay" in c.title.lower() or "cost" in c.title.lower() or "free" in c.title.lower() :
+        print(time + ": " + c.author.name + " queried for Pay to Play")
         c.reply("If you're asking about whether the game is still free to play, the developers [moved the game to Pay to Play](https://blankmediagames.com/phpbb/viewtopic.php?f=11&t=92848)" +
                 " in November of 2018 to combat a flood of people spamming meaningless messages in games and making new accounts to avoid bans. You can " +
                 "still play for free if you create an account before November of 2018. If you want to refer a friend, the referral code feature allows you to " +
                 "give then 5 free games. However, if they break the rules and get banned, you'll get a suspension as well! Only give codes to people you" +
                 " know personally. Giving or asking for codes in this subreddit is not allowed." + config.signature)
-    if ("freez" in c.name.lower()\
-            or "lag" in c.name.lower()\
-            or "disconnect" in c.name.lower()\
-            or "dc" in c.name.lower()) and c.link_flair_text == 'Question':
+    if ("freez" in c.title.lower()\
+            or "lag" in c.title.lower()\
+            or "disconnect" in c.title.lower()\
+            or "dc" in c.title.lower()) and c.link_flair_text == 'Question':
         print(time + ": " + c.author.name + " queried for freezing and lagging.")
         c.reply("If your game seizes and stops responding, try one of the following fixes. \n\n" +
                 "* ON BROWSER: Try resizing the browser window a few times. Nobody is quite sure why this works, but"
@@ -174,7 +175,7 @@ def check_triggers(crt, time, c, b):
                 "The game doesn't deal with packet loss that well. This can occasionally happen even on strong Wi-Fi"
                 + " or cellular connections." +
                 config.signature)
-    if "crash" in c.name.lower() or "error" in c.name.lower() or "bug" in c.name.lower() or "glitch" in c.name.lower() :
+    if "crash" in c.title.lower() or "error" in c.title.lower() or "bug" in c.title.lower() or "glitch" in c.title.lower() :
         print(time + ": " + c.author.name + " queried for crashing.")
         c.reply("If you're talking about an error in the game, please be aware that the developers no longer check this subreddit." +
                 " Please send bug reports to the developers on the official Town of Salem forums.\n\n [General bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=10) \n\n [Mobile bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=60)" +
@@ -216,11 +217,10 @@ def run_bot(r, chknum, tick=config.tick):
             check_triggers(crt, now, c, b)
 
     # Same thing as above, but checks posts instead of comments.
-    #print ("Checking", chknum, "posts")
     for post in r.subreddit('TownofSalemgame').new(limit=chknum):
         #print(post.title) #Leftover from debugging
         # BESIDES the first time when it checks 1000 posts, check if the poster is posting too much
-        if post.id not in crt and tick != 50:
+        if post.id not in crt :
             crt = get_comment_list()
             check_triggers(crt,now,post,post.selftext.lower())
     
