@@ -60,10 +60,10 @@ def get_time() :
 
 # Check to make sure the author isn't posting too many posts per day
 def check_author(crt, now, post):
-
+    global submitters
+    
     # We keep track of submitters with a dictionary stored in a JSON file.
     with open(wpath + 'submitters.json') as s:
-        global submitters
         submitters = json.load(s)
     
     # If the author is in the dictionary (they've posted something already today), increment their value by 1
@@ -92,6 +92,12 @@ def check_author(crt, now, post):
 
 # A list of triggers for the bot.
 def check_triggers(crt, time, c, b):
+
+    # This catches the exception we get for trying to fetch the title of a comment
+    try :
+        t = c.title.lower()
+    except AttributeError :
+        t = ''
     check_author(crt, time, c)
     #print("Checking triggers for " + c.name)
     
@@ -130,13 +136,19 @@ def check_triggers(crt, time, c, b):
             print (time + ": " + c.author.name + " queried their rate limit.")
             c.reply("You've posted " + submitters[c.author.name] + " times today. Once you post " + str(config.max_posts) + 
                     " posts, subsequent posts will be removed. This resets at midnight UTC." + config.signature)
+    if ("elo" in t and ('+' in t or '-' in t)) or 'in ' in t) :
+        print(time + ":", c.author.name, "queried ELO")
+        c.reply("It seems like you might be asking how ELO gain or loss is calculated. \n\n The game calculates ELO based on the following factors:\n\n" +
+                "*Your ELO in comparison to the average ELO of your opponents\n*Your role's winrate\n*Whether or not you won\n\nNothing else is taken into consideration" +
+                ". If you got a rather low ELO gain, it was probably because your role's winrate is high or because you were matched with opponents that weren't as high rank as you." +
+                " If you got a lot of ELO from a game, you were either playing a role with a low winrate, or you were matched with players that were much higher rank than you." + config.signature)
     # This rather long line checks for "new" and "player" in the title, OR "noob" and something else that says the OP
     # is the noob.
-    if "new" in c.title.lower() and "player" in c.title.lower()\
-            or ("noob" in c.name.lower() and ("player" in c.title.lower()
-                                              or "here" in c.title.lower()
-                                              or "'m" in c.title.lower()
-                                              or "im" in c.title.lower())):
+    if "new" in t and "player" in t\
+            or ("noob" in c.name.lower() and ("player" in t
+                                              or "here" in t
+                                              or "'m" in t
+                                              or "im" in t)):
         print(time + ":", c.author.name, "queried new player.")
         
         # Also borrowed from Seth
@@ -149,17 +161,17 @@ def check_triggers(crt, time, c, b):
                 '[Frequently Asked Questions](https://www.reddit.com/r/TownofSalemgame/wiki/faq)' +
                 'and the ["Is is against the rules?"](https://www.redd.it/fucmif?sort=qa) thread.' +
                 config.signature)
-    if "pay" in c.title.lower() or "cost" in c.title.lower() or "free" in c.title.lower() :
+    if "pay" in t or "cost" in t or "free " in t or "free?" in t :
         print(time + ": " + c.author.name + " queried for Pay to Play")
         c.reply("If you're asking about whether the game is still free to play, the developers [moved the game to Pay to Play](https://blankmediagames.com/phpbb/viewtopic.php?f=11&t=92848)" +
                 " in November of 2018 to combat a flood of people spamming meaningless messages in games and making new accounts to avoid bans. You can " +
                 "still play for free if you create an account before November of 2018. If you want to refer a friend, the referral code feature allows you to " +
                 "give then 5 free games. However, if they break the rules and get banned, you'll get a suspension as well! Only give codes to people you" +
                 " know personally. Giving or asking for codes in this subreddit is not allowed." + config.signature)
-    if ("freez" in c.title.lower()\
-            or "lag" in c.title.lower()\
-            or "disconnect" in c.title.lower()\
-            or "dc" in c.title.lower()) and c.link_flair_text == 'Question':
+    if ("freez" in t\
+            or "lag" in t\
+            or "disconnect" in t\
+            or "dc" in t) and c.link_flair_text == 'Question':
         print(time + ": " + c.author.name + " queried for freezing and lagging.")
         c.reply("If your game seizes and stops responding, try one of the following fixes. \n\n" +
                 "* ON BROWSER: Try resizing the browser window a few times. Nobody is quite sure why this works, but"
@@ -175,7 +187,7 @@ def check_triggers(crt, time, c, b):
                 "The game doesn't deal with packet loss that well. This can occasionally happen even on strong Wi-Fi"
                 + " or cellular connections." +
                 config.signature)
-    if "crash" in c.title.lower() or "error" in c.title.lower() or "bug" in c.title.lower() or "glitch" in c.title.lower() :
+    if "crash" in t or "error" in t or "bug" in t or "glitch" in t :
         print(time + ": " + c.author.name + " queried for crashing.")
         c.reply("If you're talking about an error in the game, please be aware that the developers no longer check this subreddit." +
                 " Please send bug reports to the developers on the official Town of Salem forums.\n\n [General bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=10) \n\n [Mobile bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=60)" +
@@ -231,14 +243,14 @@ def run_bot(r, chknum, tick=config.tick):
         if message.new:
             
             # If the user comments `!delete` and they are the OP, then delete the comment.
-            if "!delete" in message.body.lower():
+            if "!del" in message.body.lower():
                 # Check if the parent comment was written by the bot and if the one asking to delete is the parent
                 # commenter
                 if message.parent().author.name == r.user.me()\
                         and message.parent().parent().author.name == message.author.name :
                     message.parent().delete()
                     message.reply("Successfully deleted." + config.signature)
-                    
+
             # If the user is just running the !info or !blacklist command, we don't need to check anything else.
             if "!info" in message.body.lower() :
                 message.reply("**NateNate60's ToS_Helper_Bot version" + version + "**\n\n" +
