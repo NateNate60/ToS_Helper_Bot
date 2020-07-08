@@ -5,6 +5,7 @@ import time
 import datetime
 import json
 
+global submitters
 wpath = config.workingdir
 
 version = "1.0"
@@ -60,12 +61,11 @@ def get_time() :
 
 # Check to make sure the author isn't posting too many posts per day
 def check_author(crt, now, post):
-    global submitters
     
     # We keep track of submitters with a dictionary stored in a JSON file.
-    with open(wpath + 'submitters.json') as s:
+    with open(wpath + 'submitters.json', 'r') as s:
         submitters = json.load(s)
-    
+
     # If the author is in the dictionary (they've posted something already today), increment their value by 1
     if post.author.name in submitters:
         submitters[post.author.name] += 1
@@ -74,7 +74,7 @@ def check_author(crt, now, post):
     # value to 1.
     else:
         submitters[post.author.name] = 1
-    
+
     # If they've posted MORE than the max posts per day, remove their post.
     if submitters[post.author.name] > config.max_posts:
         post.mod.remove()
@@ -84,9 +84,9 @@ def check_author(crt, now, post):
         
     
     # Write the dictionary of submitters back into the JSON file
+
     with open(wpath + 'submitters.json', 'w') as s:
         json.dump(submitters, s)
-
     write_comment_list(post.id, crt)
 
 
@@ -136,7 +136,7 @@ def check_triggers(crt, time, c, b):
             print (time + ": " + c.author.name + " queried their rate limit.")
             c.reply("You've posted " + submitters[c.author.name] + " times today. Once you post " + str(config.max_posts) + 
                     " posts, subsequent posts will be removed. This resets at midnight UTC." + config.signature)
-    if ("elo" in t and (('+' in t or '-' in t) or 'in ' in t) :
+    if "elo" in t and (('+' in t or '-' in t) or 'in ' in t) :
         print(time + ":", c.author.name, "queried ELO")
         c.reply("It seems like you might be asking how ELO gain or loss is calculated. \n\n The game calculates ELO based on the following factors:\n\n" +
                 "*Your ELO in comparison to the average ELO of your opponents\n*Your role's winrate\n*Whether or not you won\n\nNothing else is taken into consideration" +
@@ -286,7 +286,8 @@ r = login()
 tick = config.tick
 #if tick == 0:
 #    run_bot(r, chknum=10)
-# Run the bot forever
+
+
 while True:
     tick += 1
     now = get_time()
@@ -305,7 +306,7 @@ while True:
         print(now + ":", "Exception when running tick", tick)
         print(ex)
     '''
-    if int(time.time())%86400 > 5 :
+    if int(time.time())%86400 < 5 :
         # Empty the dictionary every 24 hours
         submitters = {}
         with open(wpath + 'submitters.json', 'w') as s:
