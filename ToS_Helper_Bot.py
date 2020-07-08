@@ -136,7 +136,7 @@ def check_triggers(crt, time, c, b):
             print (time + ": " + c.author.name + " queried their rate limit.")
             c.reply("You've posted " + submitters[c.author.name] + " times today. Once you post " + str(config.max_posts) + 
                     " posts, subsequent posts will be removed. This resets at midnight UTC." + config.signature)
-    if ("elo" in t and ('+' in t or '-' in t)) or 'in ' in t) :
+    if ("elo" in t and (('+' in t or '-' in t) or 'in ' in t) :
         print(time + ":", c.author.name, "queried ELO")
         c.reply("It seems like you might be asking how ELO gain or loss is calculated. \n\n The game calculates ELO based on the following factors:\n\n" +
                 "*Your ELO in comparison to the average ELO of your opponents\n*Your role's winrate\n*Whether or not you won\n\nNothing else is taken into consideration" +
