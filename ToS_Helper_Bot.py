@@ -192,6 +192,11 @@ def check_triggers(crt, time, c, b):
         c.reply("If you're talking about an error in the game, please be aware that the developers no longer check this subreddit." +
                 " Please send bug reports to the developers on the official Town of Salem forums.\n\n [General bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=10) \n\n [Mobile bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=60)" +
                 "\n\n [Steam bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=78)" + config.signature)
+    if 'log in' in t or 'login' in t or 'logging in' in t or 'password' in t :
+        print(time + ": " + c.author.name + " queried for login issues")
+        c.reply("Are you having trouble logging into the game? Consider reading [this thread](https://www.blankmediagames.com/phpbb/viewtopic.php?f=11&t=105415&p=3342479#p3342479) on the Official Forums for help if your account was made" +
+                " before 2019. A password reset was required by BlankMediaGames for security reasons.\n\nHave you forgotten your password? You can [request a password reset here](https://www.blankmediagames.com/help/requestpasswordreset.php)." +
+                "\n\nNeed more help? If we can't solve your problem, you should [send an email to the developers](mailto:support@blankmediagames.zendesk.com)" + config.signature)
     crt = write_comment_list(c.id, crt)
 
 
