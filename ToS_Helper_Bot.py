@@ -311,11 +311,14 @@ while True:
         print(now + ":", "Exception when running tick", tick)
         print(ex)
     '''
-    if int(time.time())%86400 < 5 :
+    if int(time.time())%86400 < 50 :
         # Empty the dictionary every 24 hours
+        # Sometimes it's a bit slow to run so this 50 ensures it will clear the dictionary at least ONCE per day in that first minute.
+        # False negatives are better than false positives in this case.
         submitters = {}
         with open(wpath + 'submitters.json', 'w') as s:
-            json.dump(submitters, s)
+            s.write('{}')
+
     
     # This keeps track of and reports how many cycles the bot's gone through, but with decreasing frequency because
     # it's less likely to crash the longer it's been running.
