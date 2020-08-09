@@ -96,9 +96,10 @@ def check_triggers(crt, time, c, b):
     # This catches the exception we get for trying to fetch the title of a comment
     try :
         t = c.title.lower()
+        check_author(crt, time, c)
     except AttributeError :
-        t = ''
-    check_author(crt, time, c)
+        t = b
+    
     #print("Checking triggers for " + c.name)
     
     # Here, we use the well-established and respected technique of chaining together millions of if statements to
