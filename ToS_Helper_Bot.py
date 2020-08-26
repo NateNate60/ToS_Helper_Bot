@@ -252,11 +252,13 @@ def run_bot(r, chknum, tick=config.tick):
             if "!del" in message.body.lower():
                 # Check if the parent comment was written by the bot and if the one asking to delete is the parent
                 # commenter
-                if message.parent().author.name == r.user.me()\
-                        and message.parent().parent().author.name == message.author.name :
-                    message.parent().delete()
-                    message.reply("Successfully deleted." + config.signature)
-
+                try :
+                    if message.parent().author.name == r.user.me()\
+                            and message.parent().parent().author.name == message.author.name and "removed" not in message.parent().body.lower() :
+                        message.parent().delete()
+                        message.reply("Successfully deleted." + config.signature)
+                except AttributeError :
+                    pass
             # If the user is just running the !info or !blacklist command, we don't need to check anything else.
             if "!info" in message.body.lower() :
                 message.reply("**NateNate60's ToS_Helper_Bot version" + version + "**\n\n" +
