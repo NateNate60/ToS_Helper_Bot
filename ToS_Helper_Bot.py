@@ -230,10 +230,25 @@ def run_bot(r, chknum, tick=config.tick):
                 and c.id not in crt \
                 and not c.locked \
                 and not c.archived \
-                and ("what is" in b or "what's" in b or "!def" in b):
+                and ("what is" in b or "what's" in b or "!def" in b) :
             crt = get_comment_list()
             check_triggers(crt, now, c, b)
-
+        elif c.id not in crt and ("!tb" in b or "!rep" in b) and c.author not in config.blacklisted :
+            payload = b.split(' ')
+            if len(payload) != 2 :
+                c.reply("Invalid syntax. The correct syntax is `!reports [username]`. Please use your Town of Salem username and ***not** your Reddit or Steam username." + signature)
+                crt = write_comment_list(c.id, crt)
+            else :
+                with open ("reportsqueue.txt", 'w') as rq :
+                    rq.write(payload[1])
+                    t.sleep(7)
+                with open ("reports.json", 'r') as rj :
+                    reports = json.read(rj)
+                    replymessage = 'Fetched ' + str(len(reports)) + " via [u/Turdpile](https://reddit.com/u/turdpile)'s TrialBot.\n\n"
+                    for report in reports :
+                        replymessage.append("- " + report + "\n")
+                        
+                    c.reply(replymessage + signature)
     # Same thing as above, but checks posts instead of comments.
     for post in r.subreddit('TownofSalemgame').new(limit=chknum):
         #print(post.title) #Leftover from debugging
