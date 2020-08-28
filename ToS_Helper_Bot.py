@@ -198,6 +198,11 @@ def check_triggers(crt, time, c, b):
         c.reply("Are you having trouble logging into the game? Consider reading [this thread](https://www.blankmediagames.com/phpbb/viewtopic.php?f=11&t=105415&p=3342479#p3342479) on the Official Forums for help if your account was made" +
                 " before 2019. A password reset was required by BlankMediaGames for security reasons.\n\nHave you forgotten your password? You can [request a password reset here](https://www.blankmediagames.com/help/requestpasswordreset.php)." +
                 "\n\nNeed more help? If we can't solve your problem, you should [send an email to the developers](mailto:support@blankmediagames.zendesk.com)" + config.signature)
+    if "trial" in t and 'sys' in t :
+        print (time + ": " + c.author.name + " queried for the Trial System.")
+        c.reply("If you're asking how the Trial System works, the Trial System is BlankMediaGame's system where regular Town of Salem players can help sort through reports and judge whether they are guilty or not. Anyone with more than "+
+                " 150 games played can vote on reports in the Trial System. [Click here to get to the Trial System](https://blankmediagames.com/Trial). If a majority of Jurors decide that a report is guilty, it will be refered to a Judge "+
+                "for final approval. If the judge decides that a penalty will be issued, then they can do so. For more questions, you can contact the Trial System administrator, [TurdPile](https://reddit.com/user/turdpile)." + config.signature)
     crt = write_comment_list(c.id, crt)
 
 
@@ -230,25 +235,34 @@ def run_bot(r, chknum, tick=config.tick):
                 and c.id not in crt \
                 and not c.locked \
                 and not c.archived \
-                and ("what is" in b or "what's" in b or "!def" in b) :
+                and ("what is" in b or "what's" in b or "!def" in b or "how does" in b or ("how" in b and "s" in b and "?" in b))
+                and (len(b) > 50 or "!def" in b) :
             crt = get_comment_list()
             check_triggers(crt, now, c, b)
         elif c.id not in crt and ("!tb" in b or "!rep" in b) and c.author not in config.blacklisted :
+            print (c.author.name + " queried reports")
             payload = b.split(' ')
-            if len(payload) != 2 :
-                c.reply("Invalid syntax. The correct syntax is `!reports [username]`. Please use your Town of Salem username and ***not** your Reddit or Steam username." + signature)
-                crt = write_comment_list(c.id, crt)
+            if len(payload) > 2 or c.author.name == "ToS_Helper_Bot" :
+                c.reply("Invalid syntax. The correct syntax is `!reports [username]`. Please use your Town of Salem username and ***not** your Reddit or Steam username. For help or general information, run `!reports`" + config.signature)
+            elif len(payload) == 1 :
+                c.reply("INFORMATION ON `!reports`:\n\n`!reports` allows you to query Town of Salem users' reports. To query someone's reports, run `!reports [username]`. For example, to query NateNate60's reports, run `!reports NateNate60." +
+                        " The bot works by passing commands to [TurdPile](https://reddit.com/user/turdpile]'s TrialBot, which runes on the Town of Salem Trial System Discord server. Currently, the bot will only return guilty reports." +
+                        ' If no guilty reports are found *or the username does not exist*, the bot will return "no results found". This does *not* mean that the user has never been reported or that all the reports against them were found' +
+                        " to be not guilty. It just means that no reports were found to be guilty yet. For details on how the Trial System works, just ask " + '"how does the trial system work?"' + config.signature)
             else :
                 with open ("reportsqueue.txt", 'w') as rq :
                     rq.write(payload[1])
-                    t.sleep(7)
+                time.sleep(7)
                 with open ("reports.json", 'r') as rj :
-                    reports = json.read(rj)
-                    replymessage = 'Fetched ' + str(len(reports)) + " via [u/Turdpile](https://reddit.com/u/turdpile)'s TrialBot.\n\n"
+                    reports = json.load(rj)
+                    replymessage = 'Fetched ' + str(len(reports)) + " reports via [TurdPile](https://reddit.com/user/turdpile)'s TrialBot.\n\n"
+                    if len(reports) == 0 :
+                        replymessage = replymessage +  "No guilty reports were found."
                     for report in reports :
-                        replymessage.append("- " + report + "\n")
+                        replymessage = replymessage + "- " + report + "\n"
                         
-                    c.reply(replymessage + signature)
+                    c.reply(replymessage + config.signature)
+            crt = write_comment_list(c.id, crt)
     # Same thing as above, but checks posts instead of comments.
     for post in r.subreddit('TownofSalemgame').new(limit=chknum):
         #print(post.title) #Leftover from debugging
