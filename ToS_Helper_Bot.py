@@ -96,9 +96,11 @@ def check_triggers(crt, time, c, b):
     # This catches the exception we get for trying to fetch the title of a comment
     try :
         t = c.title.lower()
+        flair = c.link_flair_text
         check_author(crt, time, c)
     except AttributeError :
         t = b
+        flair == None
     
     #print("Checking triggers for " + c.name)
     
@@ -172,7 +174,7 @@ def check_triggers(crt, time, c, b):
     if ("freez" in t\
             or "lag" in t\
             or "disconnect" in t\
-            or "dc" in t) and c.link_flair_text == 'Question':
+            or "dc" in t) and flair == 'Question':
         print(time + ": " + c.author.name + " queried for freezing and lagging.")
         c.reply("If your game seizes and stops responding, try one of the following fixes. \n\n" +
                 "* ON BROWSER: Try resizing the browser window a few times. Nobody is quite sure why this works, but"
@@ -231,33 +233,37 @@ def run_bot(r, chknum, tick=config.tick):
     #print ("Checking " + str(chknum) + " comments")
     for c in r.subreddit('TownofSalemgame').comments(limit=chknum):
         b = c.body.lower()
-        if c.author not in config.blacklisted \
+        if c.author not in config.blacklisted and c.author.name != "ToS_Helper_Bot"\
                 and c.id not in crt \
                 and not c.locked \
                 and not c.archived \
-                and ("what is" in b or "what's" in b or "!def" in b or "how does" in b or ("how" in b and "s" in b and "?" in b))
-                and (len(b) > 50 or "!def" in b) :
+                and ("what is" in b or "what's" in b or "!def" in b or "how does" in b or ("how" in b and "s" in b and "?" in b))\
+                and (len(b) < 50 or "!def" in b) :
             crt = get_comment_list()
             check_triggers(crt, now, c, b)
-        elif c.id not in crt and ("!tb" in b or "!rep" in b) and c.author not in config.blacklisted :
+        elif c.id not in crt and ("!tb" in b or "!rep" in b) and c.author.name not in config.blacklisted and c.author.name != "ToS_Helper_Bot" :
             print (c.author.name + " queried reports")
             payload = b.split(' ')
-            if len(payload) > 2 or c.author.name == "ToS_Helper_Bot" :
-                c.reply("Invalid syntax. The correct syntax is `!reports [username]`. Please use your Town of Salem username and ***not** your Reddit or Steam username. For help or general information, run `!reports`" + config.signature)
+            if len(payload) > 2 :
+                c.reply("Invalid syntax. The correct syntax is `!reports [username]`, without the brackets. Please use your Town of Salem username and *not* your Reddit or Steam username. For help or general information, run `!reports`" + config.signature)
             elif len(payload) == 1 :
                 c.reply("INFORMATION ON `!reports`:\n\n`!reports` allows you to query Town of Salem users' reports. To query someone's reports, run `!reports [username]`. For example, to query NateNate60's reports, run `!reports NateNate60." +
                         " The bot works by passing commands to [TurdPile](https://reddit.com/user/turdpile]'s TrialBot, which runes on the Town of Salem Trial System Discord server. Currently, the bot will only return guilty reports." +
                         ' If no guilty reports are found *or the username does not exist*, the bot will return "no results found". This does *not* mean that the user has never been reported or that all the reports against them were found' +
                         " to be not guilty. It just means that no reports were found to be guilty yet. For details on how the Trial System works, just ask " + '"how does the trial system work?"' + config.signature)
             else :
+                if "[" in payload[1] or "]" in payload[1] or "/" in payload[1] :
+                    c.reply("Invalid syntax. Please try again without the brackets. Run `!reports` by itself for more info." + config.signature)
+                    crt = write_comment_list(c.id, crt)
+                    continue
                 with open ("reportsqueue.txt", 'w') as rq :
                     rq.write(payload[1])
                 time.sleep(7)
                 with open ("reports.json", 'r') as rj :
                     reports = json.load(rj)
-                    replymessage = 'Fetched ' + str(len(reports)) + " reports via [TurdPile](https://reddit.com/user/turdpile)'s TrialBot.\n\n"
+                    replymessage = 'Fetched ' + str(len(reports)) + " reports " + 'against ' + payload[1] + " via [TurdPile](https://reddit.com/user/turdpile)'s TrialBot.\n\n"
                     if len(reports) == 0 :
-                        replymessage = replymessage +  "No guilty reports were found."
+                        replymessage = replymessage +  "No guilty reports were found. This does not mean that there were no reports, or that all pending reports were found innocent."
                     for report in reports :
                         replymessage = replymessage + "- " + report + "\n"
                         
@@ -284,7 +290,7 @@ def run_bot(r, chknum, tick=config.tick):
                 try :
                     if message.parent().author.name == r.user.me()\
                             and message.parent().parent().author.name == message.author.name and "removed" not in message.parent().body.lower() :
-                        message.parent().delete()
+                        message.parent().mod.remove(spam = False, mod_note="User requested removal")
                         message.reply("Successfully deleted." + config.signature)
                 except AttributeError :
                     pass
@@ -333,6 +339,9 @@ while True:
         run_bot(r, config.chknum, tick)
     except pex.ServerError:
         print (now + ": The bot received an HTTP 503 response and will now restart.")
+    except praw.exceptions.RedditAPIException :
+        #For when the bot replies to a comment but it's been deleted
+        pass
     except pex.RequestException :
     # In case it ever does encounter issues with Reddit's rate limit
         time.sleep(60)
@@ -365,4 +374,4 @@ while True:
     elif tick%500 == 0 and tick < 3000:
         print(now + ":", 'The bot has successfully completed', tick, "cycles.")
     elif tick%1000 == 0:
-        print(now + ":", 'The bot has successfully completed', tick, "cycles.")
+        print(now + ":", 'The bot has successfully completed', tick, "cyc
