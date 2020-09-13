@@ -100,7 +100,7 @@ def check_triggers(crt, time, c, b):
         check_author(crt, time, c)
     except AttributeError :
         t = b
-        flair == None
+        flair = None
     
     #print("Checking triggers for " + c.name)
     
@@ -252,6 +252,8 @@ def run_bot(r, chknum, tick=config.tick):
                         ' If no guilty reports are found *or the username does not exist*, the bot will return "no results found". This does *not* mean that the user has never been reported or that all the reports against them were found' +
                         " to be not guilty. It just means that no reports were found to be guilty yet. For details on how the Trial System works, just ask " + '"how does the trial system work?"' + config.signature)
             else :
+                if len(payload) == 2 :
+                    payload.append('')
                 if "[" in payload[1] or "]" in payload[1] or "/" in payload[1] :
                     c.reply("Invalid syntax. Please try again without the brackets. Run `!reports` by itself for more info." + config.signature)
                     crt = write_comment_list(c.id, crt)
@@ -266,8 +268,10 @@ def run_bot(r, chknum, tick=config.tick):
                         replymessage = replymessage +  "No guilty reports were found. This does not mean that there were no reports, or that all pending reports were found innocent."
                     for report in reports :
                         replymessage = replymessage + "- " + report + "\n"
-                        
-                    c.reply(replymessage + config.signature)
+                    if (c.is_submitter or payload[2] == 'here' or c.author.name in config.approved or "access your reports here" in c.submission.title.lower()) and (payload[2] != "dm" and payload[2] != "pm" and payload[2] != "private"):
+                        c.reply(replymessage + config.signature)
+                    else :
+                        c.author.message("Reports request", replymessage + config.signature)
             crt = write_comment_list(c.id, crt)
     # Same thing as above, but checks posts instead of comments.
     for post in r.subreddit('TownofSalemgame').new(limit=chknum):
@@ -374,4 +378,4 @@ while True:
     elif tick%500 == 0 and tick < 3000:
         print(now + ":", 'The bot has successfully completed', tick, "cycles.")
     elif tick%1000 == 0:
-        print(now + ":", 'The bot has successfully completed', tick, "cyc
+        print(now + ":", 'The bot has successfully completed', tick, "cycles.")
