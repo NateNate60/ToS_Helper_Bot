@@ -244,10 +244,11 @@ def run_bot(r, chknum, tick=config.tick):
         elif c.id not in crt and ("!tb" in b or "!rep" in b) and c.author.name not in config.blacklisted and c.author.name != "ToS_Helper_Bot" :
             print (c.author.name + " queried reports")
             payload = b.split(' ')
-            if len(payload) > 2 :
+            if len(payload) > 3 :
                 c.reply("Invalid syntax. The correct syntax is `!reports [username]`, without the brackets. Please use your Town of Salem username and *not* your Reddit or Steam username. For help or general information, run `!reports`" + config.signature)
             elif len(payload) == 1 :
-                c.reply("INFORMATION ON `!reports`:\n\n`!reports` allows you to query Town of Salem users' reports. To query someone's reports, run `!reports [username]`. For example, to query NateNate60's reports, run `!reports NateNate60." +
+                c.reply("INFORMATION ON `!reports`:\n\n`!reports` allows you to query Town of Salem users' reports. To query someone's reports, run `!reports [username]`. Your reports will be returned in a PM, unless you are a designated user (mods and prominent users), are the OP of the original post, or are commenting in the designated reports-fetching megathread, you will receive your reports in a PM. "
+                        " If you are posting in the megathread and wish to receive your reports in a PM, use `!reports [username] pm`. For example, to query NateNate60's reports in a PM, run `!reports NateNate60 pm`." +
                         " The bot works by passing commands to [TurdPile](https://reddit.com/user/turdpile]'s TrialBot, which runes on the Town of Salem Trial System Discord server. Currently, the bot will only return guilty reports." +
                         ' If no guilty reports are found *or the username does not exist*, the bot will return "no results found". This does *not* mean that the user has never been reported or that all the reports against them were found' +
                         " to be not guilty. It just means that no reports were found to be guilty yet. For details on how the Trial System works, just ask " + '"how does the trial system work?"' + config.signature)
@@ -265,13 +266,13 @@ def run_bot(r, chknum, tick=config.tick):
                     reports = json.load(rj)
                     replymessage = 'Fetched ' + str(len(reports)) + " reports " + 'against ' + payload[1] + " via [TurdPile](https://reddit.com/user/turdpile)'s TrialBot.\n\n"
                     if len(reports) == 0 :
-                        replymessage = replymessage +  "No guilty reports were found. This does not mean that there were no reports, or that all pending reports were found innocent."
+                        replymessage = replymessage +  "No guilty reports were found. This does not mean that there were no reports, or that all pending reports were found innocent. For more information on this command, run `!reports` by itself."
                     for report in reports :
                         replymessage = replymessage + "- " + report + "\n"
                     if (c.is_submitter or payload[2] == 'here' or c.author.name in config.approved or "access your reports here" in c.submission.title.lower()) and (payload[2] != "dm" and payload[2] != "pm" and payload[2] != "private"):
                         c.reply(replymessage + config.signature)
                     else :
-                        c.author.message("Reports request", replymessage + config.signature)
+                        c.author.message("Reports request", replymessage + config.signature + "\n\nYou are receiving this in a PM because you were not the OP or a designated user, and you weren't commenting in the reports megathread, or because you specifically requested it.")
             crt = write_comment_list(c.id, crt)
     # Same thing as above, but checks posts instead of comments.
     for post in r.subreddit('TownofSalemgame').new(limit=chknum):
@@ -293,7 +294,7 @@ def run_bot(r, chknum, tick=config.tick):
                 # commenter
                 try :
                     if message.parent().author.name == r.user.me()\
-                            and message.parent().parent().author.name == message.author.name and "removed" not in message.parent().body.lower() :
+                            and message.parent().parent().author.name == message.author.name and "because" not in message.parent().body.lower() :
                         message.parent().mod.remove(spam = False, mod_note="User requested removal")
                         message.reply("Successfully deleted." + config.signature)
                 except AttributeError :
