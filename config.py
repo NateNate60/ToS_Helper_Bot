@@ -45,3 +45,13 @@ client_secret = "client_secret"
 
 #THE SLASH IS NECESSARY
 workingdir="/thb/"
+
+# Token for Discord TrialBot integration
+token = 'token'
+
+# List of approved users.
+approved = []
+
+# List of people who are not allowed to have flair.
+# If the bot sees they have flair, their flair will be cleared.
+no_flair = ['nameoftrollthatabusesflairs']
