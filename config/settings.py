@@ -20,3 +20,6 @@ signature = "\n\nI try my best to be accurate and trigger on only those who need
 # If True, print all actions into the console instead of trying to take them.
 # This is useful for testing the bot.
 read_only = True
+
+# List of users who abuse flairs and should not be allowed to have a flair.
+no_flair = []

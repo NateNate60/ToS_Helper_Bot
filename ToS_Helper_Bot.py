@@ -1,6 +1,8 @@
 import praw
 from config import settings
 from config import secrets
+import prawcore.exceptions as pex
+import time
 import datetime
 from os import path
 import sqlite3
@@ -49,10 +51,13 @@ def run_bot(r, chknum=settings.chknum):
     :param chknum: the maximum number of submissions of each type to check.
     :return: None.
     """
+    for u in settings.no_flair:
+        r.subreddit('TownofSalemgame').flair.delete(u)
+
     crt = get_comment_list()
 
     for c in r.subreddit('TownofSalemgame').comments(limit=chknum):
-        if c.locked or c.archived or c.id in crt:
+        if c.locked or c.archived or c.id in crt or c.author.name == "ToS_Helper_Bot":
             continue
         log("Processing comment", c.id, "by", c.author.name)
         moderate_submission(c, c.body)
@@ -94,7 +99,7 @@ def help_submission(s, body):
     :return: None.
     """
     b = body.lower()
-    if "what is" in b or "what's" in b or "!def" in b:
+    if "!def" in b or ("what is" in b or "what's" in b or "how does" in b or ("how" in b and "s" in b and "?" in b)) and len(b) < 50:
         if "vfr" in b:
             log("User", s.author.name, "asked about VFR in submission", s.id)
             if not settings.read_only:
@@ -104,6 +109,39 @@ def help_submission(s, body):
                         "This helps narrow down the list of roles that remain in the game and generally helps the Town"
                         " a lot more than evils." +
                         settings.signature)
+
+    if "!tb" in b or "!rep" in b:
+        print (c.author.name + " queried reports")
+        payload = b.split(' ')
+        if len(payload) > 3 and len(payload) < 10 :
+            c.reply("Invalid syntax. The correct syntax is `!reports [username]`, without the brackets. Please use your Town of Salem username and *not* your Reddit or Steam username. For help or general information, run `!reports`" + settings.signature)
+        elif len(payload) == 1 :
+            c.reply("INFORMATION ON `!reports`:\n\n`!reports` allows you to query Town of Salem users' reports. To query someone's reports, run `!reports [username]`. Your reports will be returned in a PM, unless you are a designated user (mods and prominent users), are the OP of the original post, or are commenting in the designated reports-fetching megathread, you will receive your reports in a PM. "
+                    " If you are posting in the megathread and wish to receive your reports in a PM, use `!reports [username] pm`. For example, to query NateNate60's reports in a PM, run `!reports NateNate60 pm`." +
+                    " The bot works by passing commands to [TurdPile](https://reddit.com/user/turdpile]'s TrialBot, which runes on the Town of Salem Trial System Discord server. Currently, the bot will only return guilty reports." +
+                    ' If no guilty reports are found *or the username does not exist*, the bot will return "no results found". This does *not* mean that the user has never been reported or that all the reports against them were found' +
+                    " to be not guilty. It just means that no reports were found to be guilty yet. For details on how the Trial System works, just ask " + '"how does the trial system work?"' + settings.signature)
+        elif len(payload) < 10 :
+            if len(payload) == 2 :
+                payload.append('')
+            if "[" in payload[1] or "]" in payload[1] or "/" in payload[1] :
+                c.reply("Invalid syntax. Please try again without the brackets. Run `!reports` by itself for more info." + settings.signature)
+                crt = write_comment_list(c.id, crt)
+                continue
+            with open ("reportsqueue.txt", 'w') as rq :
+                rq.write(payload[1])
+            time.sleep(7)
+            with open ("reports.json", 'r') as rj :
+                reports = json.load(rj)
+                replymessage = 'Fetched ' + str(len(reports)) + " reports " + 'against ' + payload[1] + " via [TurdPile](https://reddit.com/user/turdpile)'s TrialBot.\n\n"
+                if len(reports) == 0 :
+                    replymessage = replymessage +  "No guilty reports were found. This does not mean that there were no reports, or that all pending reports were found innocent. For more information on this command, run `!reports` by itself."
+                for report in reports :
+                    replymessage = replymessage + "- " + report + "\n"
+                if (c.is_submitter or payload[2] == 'here' or c.author.name in settings.approved or "access your reports here" in c.submission.title.lower()) and (payload[2] != "dm" and payload[2] != "pm" and payload[2] != "private"):
+                    c.reply(replymessage + settings.signature)
+                else :
+                    c.author.message("Reports request", replymessage + settings.signature + "\n\nYou are receiving this in a PM because you were not the OP or a designated user, and you weren't commenting in the reports megathread, or because you specifically requested it.")
 
     if "!rate" in b:
         payload = b.split(' ')
@@ -134,6 +172,14 @@ def help_submission(s, body):
                     'and the ["Is is against the rules?"](https://www.redd.it/fucmif?sort=qa) thread.' +
                     settings.signature)
 
+    if "pay" in b or "cost" in b or "free " in b or "free?" in b :
+        print(time + ": " + c.author.name + " queried for Pay to Play")
+        c.reply("If you're asking about whether the game is still free to play, the developers [moved the game to Pay to Play](https://blankmediagames.com/phpbb/viewtopic.php?f=11&t=92848)" +
+                " in November of 2018 to combat a flood of people spamming meaningless messages in games and making new accounts to avoid bans. You can " +
+                "still play for free if you create an account before November of 2018. If you want to refer a friend, the referral code feature allows you to " +
+                "give then 5 free games. However, if they break the rules and get banned, you'll get a suspension as well! Only give codes to people you" +
+                " know personally. Giving or asking for codes in this subreddit is not allowed." + settings.signature)
+
     if "freez" in b or "lag" in b or "disconnect" in b or "dc" in b and s.link_flair_text.strip().lower() == 'question':
         log("User", s.author.name, "appears to be asking about freezing in submission", s.id)
         if not settings.read_only:
@@ -152,15 +198,23 @@ def help_submission(s, body):
                     " Wi-Fi or cellular connections." +
                     settings.signature)
 
-    if "flash" in b:
-        log("User", s.author.name, "appears to be asking about flash in submission", s.id)
-        if not settings.read_only:
-            s.reply("If you're asking about what will happen when Google Chrome and Mozilla Firefox drop support for"
-                    " Adobe Flash in December 2020, the developers are working on porting the game to the Unity engine."
-                    "\n\n The Unity engine is already available for the mobile and Steam versions, if you want to check"
-                    " it out. Further information is available [here]"
-                    "(https://www.blankmediagames.com/phpbb/viewtopic.php?f=11&t=107706)." +
-                    settings.signature)
+    if "crash" in b or "error" in b or "bug" in b or "glitch" in b :
+        print(time + ": " + c.author.name + " queried for crashing.")
+        c.reply("If you're talking about an error in the game, please be aware that the developers no longer check this subreddit." +
+                " Please send bug reports to the developers on the official Town of Salem forums.\n\n [General bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=10) \n\n [Mobile bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=60)" +
+                "\n\n [Steam bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=78)" + settings.signature)
+
+    if 'log in' in b or 'login' in b or 'logging in' in b or 'password' in b :
+        print(time + ": " + c.author.name + " queried for login issues")
+        c.reply("Are you having trouble logging into the game? Consider reading [this thread](https://www.blankmediagames.com/phpbb/viewtopic.php?f=11&t=105415&p=3342479#p3342479) on the Official Forums for help if your account was made" +
+                " before 2019. A password reset was required by BlankMediaGames for security reasons.\n\nHave you forgotten your password? You can [request a password reset here](https://www.blankmediagames.com/help/requestpasswordreset.php)." +
+                "\n\nNeed more help? If we can't solve your problem, you should [send an email to the developers](mailto:support@blankmediagames.zendesk.com)" + settings.signature)
+
+    if "trial" in b and 'sys' in b :
+        print (time + ": " + c.author.name + " queried for the Trial System.")
+        c.reply("If you're asking how the Trial System works, the Trial System is BlankMediaGame's system where regular Town of Salem players can help sort through reports and judge whether they are guilty or not. Anyone with more than "+
+                " 150 games played can vote on reports in the Trial System. [Click here to get to the Trial System](https://blankmediagames.com/Trial). If a majority of Jurors decide that a report is guilty, it will be refered to a Judge "+
+                "for final approval. If the judge decides that a penalty will be issued, then they can do so. For more questions, you can contact the Trial System administrator, [TurdPile](https://reddit.com/user/turdpile)." + settings.signature)
 
 
 def moderate_submission(s, body):
@@ -189,11 +243,15 @@ def process_pm(msg):
     :return: None.
     """
     # If the user comments `!delete` and they are the OP, then delete the comment.
-    if "!delete" in msg.body.lower():
-        # Check if the parent comment was written by the bot and if the one asking to delete is the parent commenter
-        if msg.parent().author.name == session.user.me() and msg.parent().parent().author.name == msg.author.name:
-            msg.parent().delete()
-            msg.reply("Successfully deleted." + settings.signature)
+    if "!del" in msg.body.lower():
+        try:
+            # Check if the parent comment was written by the bot and if the one asking to delete is the parent commenter
+            if msg.parent().author.name == session.user.me() and msg.parent().parent().author.name == msg.author.name:
+                msg.parent().delete()
+                msg.reply("Successfully deleted." + settings.signature)
+        except AttributeError as err:
+            print("Error: caught AttributeError")
+            print(err)
 
     # If the user is just running the !info or !blacklist command, we don't need to check anything else.
     if "!info" in msg.body.lower():
@@ -218,7 +276,8 @@ def process_pm(msg):
             help_submission(msg.parent(), msg.parent().body)
             append_comment_list(msg.parent().id)
     except AttributeError:
-        pass
+        print("Error: caught AttributeError")
+        print(err)
 
 
 def check_author(post):
@@ -304,7 +363,7 @@ if __name__ == "__main__":
     tick = settings.tick
     # if tick == 0:
     #    run_bot(r, chknum=1000)
-    # Run the bot forever
+
     while True:
         tick += 1
         run_bot(session)
