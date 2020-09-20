@@ -1,12 +1,14 @@
 import praw
+from config import settings
+from config import secrets
 import prawcore.exceptions as pex
-import config
 import time
 import datetime
-import json
+from os import path
+import sqlite3
+import time
 
-global submitters
-wpath = config.workingdir
+wpath = path.dirname(settings.__file__)
 
 version = "1.0"
 
@@ -14,374 +16,375 @@ version = "1.0"
 # rather than in the config file, against common coding practice. Now, I'm just going to put those
 # variables in the config file and give them a new name.
 
-# We keep track of who's submitted how many posts with a dictionary.
-# The key is the user and the value is the number of posts they've submitted.
-submitters = {'testuser': '0'}
+# We keep track of who's submitted how many posts with an SQLite 3 database
+submitters = sqlite3.connect(path.join(wpath, 'submitters.sqlite3'))
+with submitters:
+    submitters.execute("CREATE TABLE IF NOT EXISTS submitters"
+                       "(username TEXT NOT NULL PRIMARY KEY,"
+                       " quantity INTEGER NOT NULL,"
+                       " last_date TEXT NOT NULL DEFAULT CURRENT_DATE)")
 
- 
-# This creates the Reddit instance and authenticates the user agent with Reddit.
+
 def login():
-    print ("Connecting to Reddit")
-    print ("Authenticating...", end='')
-    r = praw.Reddit(username=config.username,
-                    password=config.password,
-                    client_id=config.client_id,
-                    client_secret=config.client_secret,
+    """
+    Create the Reddit instance and authenticate the user agent using the credentials in config/secrets.py
+    :return: the created Reddit instance
+    """
+    log("Connecting to Reddit")
+    log("Authenticating...")
+    r = praw.Reddit(username=secrets.username,
+                    password=secrets.password,
+                    client_id=secrets.client_id,
+                    client_secret=secrets.client_secret,
                     user_agent="ToS_Definition_Bot" + version)
-    print ('done')
+    log('Authenticated')
+    r.read_only = settings.read_only
+    if r.read_only:
+        log("Running in read-only mode; intent will still be logged, but no action will be taken")
     return r
 
 
-# This function fecthes the list of comments the bot has already replied to from the respective file.
-def get_comment_list():
-    with open (wpath + "comments.txt", "r") as f :
-        comments_replied_to = f.read()
-        comments_replied_to = comments_replied_to.split("\n")
-    comments_replied_to = list(filter(None, comments_replied_to))
-    return comments_replied_to
+def run_bot(r, chknum=settings.chknum):
+    """
+    Process all new submissions to the subreddit and all new messages.
+    :param r: the Reddit session.
+    :param chknum: the maximum number of submissions of each type to check.
+    :return: None.
+    """
+    for u in settings.no_flair:
+        r.subreddit('TownofSalemgame').flair.delete(u)
+
+    crt = get_comment_list()
+
+    for c in r.subreddit('TownofSalemgame').comments(limit=chknum):
+        if c.locked or c.archived or c.id in crt or c.author.name == "ToS_Helper_Bot":
+            continue
+        log("Processing comment", c.id, "by", c.author.name)
+        moderate_submission(c, c.body)
+        if c.author not in settings.blacklisted:
+            help_submission(c, c.body)
+        # Mark the comment as processed
+        append_comment_list(c.id)
+
+    for post in r.subreddit('TownofSalemgame').new(limit=chknum):
+        if post.id in crt:
+            continue
+        log("Processing post", post.id, "by", post.author.name)
+        moderate_post(post)
+        body = post.name + "\n\n" + post.selftext
+        moderate_submission(post, body)
+        if post.author not in settings.blacklisted:
+            help_submission(post, body)
+        # Mark the post as processed
+        append_comment_list(post.id)
+
+    if settings.read_only:
+        # In PRAW read-only mode, we can't even check the inbox :(
+        return
+    # Check the inbox for any direct requests (people summoning the bot by pinging it).
+    for message in r.inbox.all():
+        # Check only unread mentions. That way, we don't have to keep track of what we've already checked. Reddit will
+        # do that for us.
+        if message.new:
+            process_pm(message)
+            # Mark as read, since we don't gain anything from processing the same message multiple times.
+            message.mark_read()
 
 
-# This function writes the comment ID to the list of comments replied to and the corresponding file.
-# WARNING: This will overwrite everything in the file. It's expected that you've read the file's contents first with
-# get_comment_list().
-def write_comment_list(id, comments_replied_to):
-    comments_replied_to.append(id)
-    with open(wpath + 'comments.txt','w') as f :
-        for i in comments_replied_to :
-            f.write(i + '\n')
-    return comments_replied_to
+def help_submission(s, body):
+    """
+    Check whether the given submission (comment or post) requires any helpful user action to be taken.
+    :param s: the submission to check.
+    :param body: the body of the submission.
+    :return: None.
+    """
+    b = body.lower()
+    if "!def" in b or ("what is" in b or "what's" in b or "how does" in b or ("how" in b and "s" in b and "?" in b)) and len(b) < 50:
+        if "vfr" in b:
+            log("User", s.author.name, "asked about VFR in submission", s.id)
+            if not settings.read_only:
+                # I've borrowed Seth's language here.
+                s.reply("VFR stands for Voting For Roles. It is the act of voting someone up to the stand to get a role"
+                        " claim from them. "
+                        "This helps narrow down the list of roles that remain in the game and generally helps the Town"
+                        " a lot more than evils." +
+                        settings.signature)
 
-
-# This function fetches the current human-readable time.
-def get_time() :
-    st = time.time()
-    st = datetime.datetime.fromtimestamp(st).strftime('%Y-%m-%d %H:%M:%S')
-    return st
-
-
-# Check to make sure the author isn't posting too many posts per day
-def check_author(crt, now, post):
-    
-    # We keep track of submitters with a dictionary stored in a JSON file.
-    with open(wpath + 'submitters.json', 'r') as s:
-        submitters = json.load(s)
-
-    # If the author is in the dictionary (they've posted something already today), increment their value by 1
-    if post.author.name in submitters:
-        submitters[post.author.name] += 1
-        
-    # If the author is NOT in the dictionary (they have NOT posted today), add them to the dictionary and set their
-    # value to 1.
-    else:
-        submitters[post.author.name] = 1
-
-    # If they've posted MORE than the max posts per day, remove their post.
-    if submitters[post.author.name] > config.max_posts:
-        post.mod.remove()
-        print (now + ": Removed post " + post.id + " by " + post.author.name + ". They posted " + str(submitters[post.author.name]) + " times today.")
-        post.reply("Unfortunately, your post has been removed because to prevent queue-flooding, we only allow " +
-                   str(config.max_posts) + " posts per person per day." + config.signature).mod.distinguish(sticky=True)
-        
-    
-    # Write the dictionary of submitters back into the JSON file
-
-    with open(wpath + 'submitters.json', 'w') as s:
-        json.dump(submitters, s)
-    write_comment_list(post.id, crt)
-
-
-# A list of triggers for the bot.
-def check_triggers(crt, time, c, b):
-
-    # This catches the exception we get for trying to fetch the title of a comment
-    try :
-        t = c.title.lower()
-        flair = c.link_flair_text
-        check_author(crt, time, c)
-    except AttributeError :
-        t = b
-        flair = None
-    
-    #print("Checking triggers for " + c.name)
-    
-    # Here, we use the well-established and respected technique of chaining together millions of if statements to
-    # simulate artificial intelligence.
-    # Seriously, we just use if statements to check if any triggers are in the comment.
-    
-    # b is the body text of the comment.
-    # c is the comment itself.
-    
-    # Use if, not elif, because we want the bot to be able to trigger more than once.
-
-    # THESE TRIGGERS IN THIS FIRST IF STATEMENT WILL GO ONLY IF SUMMONED.
-    
-    if "what is" in b or "what's" in b or "!def" in b :
-        if "vfr" in b :
-            print (time + ": " + c.author.name + " queried VFR.")
-            
-            # I've borrowed Seth's language here.
-            c.reply("VFR stands for Voting For Roles. It is the act of voting someone up to the stand to get a role"
-                    + " claim from them." +
-                    "This helps narrow down the list of roles that remain in the game and generally helps the Town a"
-                    + " lot more than evils." +
-                    config.signature)
-            crt = write_comment_list(c.id, crt)
-    
-    # ANYTHING BELOW THIS LINE WILL TRIGGER REGARDLESS OF WHETHER THE BOT WAS INTENTIONALLY SUMMONED OR NOT
-    if "!rate" in b :
+    if "!tb" in b or "!rep" in b:
+        print (c.author.name + " queried reports")
         payload = b.split(' ')
-        
-        if len(payload) == 2 :
-            print (time + ": " + c.author.name + " queried " + payload[1] + "'s rate limit.")
-            c.reply(payload[1] + " has submitted " + submitters[payload[1]] + " posts today. Once they post " + str(config.max_posts) + 
-                    " posts, subsequent posts will be removed. This resets at midnight UTC." + config.signature)
-        if len(payload) == 1 :
-            print (time + ": " + c.author.name + " queried their rate limit.")
-            c.reply("You've posted " + submitters[c.author.name] + " times today. Once you post " + str(config.max_posts) + 
-                    " posts, subsequent posts will be removed. This resets at midnight UTC." + config.signature)
-    if "elo" in t and (('+' in t or '-' in t) or 'in ' in t) :
-        print(time + ":", c.author.name, "queried ELO")
-        c.reply("It seems like you might be asking how ELO gain or loss is calculated. \n\n The game calculates ELO based on the following factors:\n\n" +
-                "*Your ELO in comparison to the average ELO of your opponents\n*Your role's winrate\n*Whether or not you won\n\nNothing else is taken into consideration" +
-                ". If you got a rather low ELO gain, it was probably because your role's winrate is high or because you were matched with opponents that weren't as high rank as you." +
-                " If you got a lot of ELO from a game, you were either playing a role with a low winrate, or you were matched with players that were much higher rank than you." + config.signature)
-    # This rather long line checks for "new" and "player" in the title, OR "noob" and something else that says the OP
-    # is the noob.
-    if "new" in t and "player" in t\
-            or ("noob" in c.name.lower() and ("player" in t
-                                              or "here" in t
-                                              or "'m" in t
-                                              or "im" in t)):
-        print(time + ":", c.author.name, "queried new player.")
-        
-        # Also borrowed from Seth
-        c.reply("It seems like you're a new player to the game. " +
-                '[Here is an extremely helpful guide made by /u/NateNate60, one of the Moderators for this subreddit]' +
-                "(https://drive.google.com/file/d/1TC_hue8fEqH3xas2yMVU8KqQA-MovRZ-/view?usp=drivesdk)," +
-                "and [here is another guide made by Chancell0r on the Forums]" +
-                "(https://blankmediagames.com/phpbb/viewtopic.php?f=3&t=73489&p=2399389)." +
-                "You should also check the sidebar of the subreddit for any other useful links, such as the " +
-                '[Frequently Asked Questions](https://www.reddit.com/r/TownofSalemgame/wiki/faq)' +
-                'and the ["Is is against the rules?"](https://www.redd.it/fucmif?sort=qa) thread.' +
-                config.signature)
-    if "pay" in t or "cost" in t or "free " in t or "free?" in t :
+        if len(payload) > 3 and len(payload) < 10 :
+            c.reply("Invalid syntax. The correct syntax is `!reports [username]`, without the brackets. Please use your Town of Salem username and *not* your Reddit or Steam username. For help or general information, run `!reports`" + settings.signature)
+        elif len(payload) == 1 :
+            c.reply("INFORMATION ON `!reports`:\n\n`!reports` allows you to query Town of Salem users' reports. To query someone's reports, run `!reports [username]`. Your reports will be returned in a PM, unless you are a designated user (mods and prominent users), are the OP of the original post, or are commenting in the designated reports-fetching megathread, you will receive your reports in a PM. "
+                    " If you are posting in the megathread and wish to receive your reports in a PM, use `!reports [username] pm`. For example, to query NateNate60's reports in a PM, run `!reports NateNate60 pm`." +
+                    " The bot works by passing commands to [TurdPile](https://reddit.com/user/turdpile]'s TrialBot, which runes on the Town of Salem Trial System Discord server. Currently, the bot will only return guilty reports." +
+                    ' If no guilty reports are found *or the username does not exist*, the bot will return "no results found". This does *not* mean that the user has never been reported or that all the reports against them were found' +
+                    " to be not guilty. It just means that no reports were found to be guilty yet. For details on how the Trial System works, just ask " + '"how does the trial system work?"' + settings.signature)
+        elif len(payload) < 10 :
+            if len(payload) == 2 :
+                payload.append('')
+            if "[" in payload[1] or "]" in payload[1] or "/" in payload[1] :
+                c.reply("Invalid syntax. Please try again without the brackets. Run `!reports` by itself for more info." + settings.signature)
+                crt = write_comment_list(c.id, crt)
+                continue
+            with open ("reportsqueue.txt", 'w') as rq :
+                rq.write(payload[1])
+            time.sleep(7)
+            with open ("reports.json", 'r') as rj :
+                reports = json.load(rj)
+                replymessage = 'Fetched ' + str(len(reports)) + " reports " + 'against ' + payload[1] + " via [TurdPile](https://reddit.com/user/turdpile)'s TrialBot.\n\n"
+                if len(reports) == 0 :
+                    replymessage = replymessage +  "No guilty reports were found. This does not mean that there were no reports, or that all pending reports were found innocent. For more information on this command, run `!reports` by itself."
+                for report in reports :
+                    replymessage = replymessage + "- " + report + "\n"
+                if (c.is_submitter or payload[2] == 'here' or c.author.name in settings.approved or "access your reports here" in c.submission.title.lower()) and (payload[2] != "dm" and payload[2] != "pm" and payload[2] != "private"):
+                    c.reply(replymessage + settings.signature)
+                else :
+                    c.author.message("Reports request", replymessage + settings.signature + "\n\nYou are receiving this in a PM because you were not the OP or a designated user, and you weren't commenting in the reports megathread, or because you specifically requested it.")
+
+    if "!rate" in b:
+        payload = b.split(' ')
+        if len(payload) == 2:
+            log("User", s.author.name, "asked for the rate limit of user", payload[1])
+            if not settings.read_only:
+                s.reply(payload[1] + " has submitted " + str(get_daily_post_count(payload[1])) + " posts today."
+                        "Once they post " + str(settings.max_posts) + " posts, subsequent posts will be removed."
+                        "This resets at midnight UTC." + settings.signature)
+        elif len(payload) == 1:
+            log("User", s.author.name, "asked for their rate limit")
+            if not settings.read_only:
+                s.reply("You've posted " + str(get_daily_post_count(s.author.name)) + " times today. Once you post " +
+                        str(settings.max_posts) + " posts, subsequent posts will be removed."
+                        "This resets at midnight UTC." + settings.signature)
+
+    if "new" in b and "player" in b or ("noob" in b and ("player" in b or "here" in b or "'m" in b or "im" in b)):
+        log("User", s.author.name, "appears to be a new player in submission", s.id)
+        if not settings.read_only:
+            # Also borrowed from Seth
+            s.reply("It seems like you're a new player to the game. "
+                    '[Here is a helpful guide made by /u/NateNate60, one of the Moderators for this subreddit]'
+                    "(https://drive.google.com/file/d/1TC_hue8fEqH3xas2yMVU8KqQA-MovRZ-/view?usp=drivesdk),"
+                    "and [here is another guide made by Chancell0r on the Forums]"
+                    "(https://blankmediagames.com/phpbb/viewtopic.php?f=3&t=73489&p=2399389). "
+                    "You should also check the sidebar of the subreddit for any other useful links, such as the "
+                    '[Frequently Asked Questions](https://www.reddit.com/r/TownofSalemgame/wiki/faq)'
+                    'and the ["Is is against the rules?"](https://www.redd.it/fucmif?sort=qa) thread.' +
+                    settings.signature)
+
+    if "pay" in b or "cost" in b or "free " in b or "free?" in b :
         print(time + ": " + c.author.name + " queried for Pay to Play")
         c.reply("If you're asking about whether the game is still free to play, the developers [moved the game to Pay to Play](https://blankmediagames.com/phpbb/viewtopic.php?f=11&t=92848)" +
                 " in November of 2018 to combat a flood of people spamming meaningless messages in games and making new accounts to avoid bans. You can " +
                 "still play for free if you create an account before November of 2018. If you want to refer a friend, the referral code feature allows you to " +
                 "give then 5 free games. However, if they break the rules and get banned, you'll get a suspension as well! Only give codes to people you" +
-                " know personally. Giving or asking for codes in this subreddit is not allowed." + config.signature)
-    if ("freez" in t\
-            or "lag" in t\
-            or "disconnect" in t\
-            or "dc" in t) and (flair == 'Question' or "!def" in b) :
-        print(time + ": " + c.author.name + " queried for freezing and lagging.")
-        c.reply("If your game seizes and stops responding, try one of the following fixes. \n\n" +
-                "* ON BROWSER: Try resizing the browser window a few times. Nobody is quite sure why this works, but"
-                + " it occasionally fixes connection issues and visual glitches. It may have to do with forcing"
-                + " the game to redraw." +
-                "\n* ON STEAM: Try verifying the game integrity. You can do this by going into your Steam library,"
-                + " then going into the game's Properties, then Local Files, then clicking the Verify Integrity"
-                + " button. You may also try resizing the game's window when this issue occurs." +
-                "\n* ON MOBILE: Try restarting your phone or re-installing the app." +
-                "\n* IN GENERAL: Wired connections are always going to be more stable than wireless ones. If"
-                + " possible, use a wired Ethernet connection where possible to prevent packet loss, which is often"
-                + " what causes disconnection issues." +
-                "The game doesn't deal with packet loss that well. This can occasionally happen even on strong Wi-Fi"
-                + " or cellular connections." +
-                config.signature)
-    if "crash" in t or "error" in t or "bug" in t or "glitch" in t :
+                " know personally. Giving or asking for codes in this subreddit is not allowed." + settings.signature)
+
+    if "freez" in b or "lag" in b or "disconnect" in b or "dc" in b and s.link_flair_text.strip().lower() == 'question':
+        log("User", s.author.name, "appears to be asking about freezing in submission", s.id)
+        if not settings.read_only:
+            s.reply("If your game seizes and stops responding, try one of the following fixes.\n\n"
+                    "* ON BROWSER: Try resizing the browser window a few times. Nobody is quite sure why this works,"
+                    " but it occasionally fixes connection issues and visual glitches. It may have to do with forcing"
+                    " the game to redraw."
+                    "\n* ON STEAM: Try verifying the game integrity. You can do this by going into your Steam library,"
+                    " then going into the game's Properties, then Local Files, then clicking the Verify Integrity"
+                    " button. You may also try resizing the game's window when this issue occurs."
+                    "\n* ON MOBILE: Try restarting your phone or re-installing the app."
+                    "\n* IN GENERAL: Wired connections are always going to be more stable than wireless ones. If"
+                    " possible, use a wired Ethernet connection where possible to prevent packet loss, which is often"
+                    " what causes disconnection issues."
+                    "The game doesn't deal with packet loss that well. This can occasionally happen even on strong"
+                    " Wi-Fi or cellular connections." +
+                    settings.signature)
+
+    if "crash" in b or "error" in b or "bug" in b or "glitch" in b :
         print(time + ": " + c.author.name + " queried for crashing.")
         c.reply("If you're talking about an error in the game, please be aware that the developers no longer check this subreddit." +
                 " Please send bug reports to the developers on the official Town of Salem forums.\n\n [General bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=10) \n\n [Mobile bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=60)" +
-                "\n\n [Steam bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=78)" + config.signature)
-    if 'log in' in t or 'login' in t or 'logging in' in t or 'password' in t :
+                "\n\n [Steam bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=78)" + settings.signature)
+
+    if 'log in' in b or 'login' in b or 'logging in' in b or 'password' in b :
         print(time + ": " + c.author.name + " queried for login issues")
         c.reply("Are you having trouble logging into the game? Consider reading [this thread](https://www.blankmediagames.com/phpbb/viewtopic.php?f=11&t=105415&p=3342479#p3342479) on the Official Forums for help if your account was made" +
                 " before 2019. A password reset was required by BlankMediaGames for security reasons.\n\nHave you forgotten your password? You can [request a password reset here](https://www.blankmediagames.com/help/requestpasswordreset.php)." +
-                "\n\nNeed more help? If we can't solve your problem, you should [send an email to the developers](mailto:support@blankmediagames.zendesk.com)" + config.signature)
-    if "trial" in t and 'sys' in t :
+                "\n\nNeed more help? If we can't solve your problem, you should [send an email to the developers](mailto:support@blankmediagames.zendesk.com)" + settings.signature)
+
+    if "trial" in b and 'sys' in b :
         print (time + ": " + c.author.name + " queried for the Trial System.")
         c.reply("If you're asking how the Trial System works, the Trial System is BlankMediaGame's system where regular Town of Salem players can help sort through reports and judge whether they are guilty or not. Anyone with more than "+
                 " 150 games played can vote on reports in the Trial System. [Click here to get to the Trial System](https://blankmediagames.com/Trial). If a majority of Jurors decide that a report is guilty, it will be refered to a Judge "+
-                "for final approval. If the judge decides that a penalty will be issued, then they can do so. For more questions, you can contact the Trial System administrator, [TurdPile](https://reddit.com/user/turdpile)." + config.signature)
-    crt = write_comment_list(c.id, crt)
+                "for final approval. If the judge decides that a penalty will be issued, then they can do so. For more questions, you can contact the Trial System administrator, [TurdPile](https://reddit.com/user/turdpile)." + settings.signature)
 
 
-# And now, the meat of the bot.
-def run_bot(r, chknum, tick=config.tick):
-
-    # Clears the flairs of people who aren't allowed to have flair
-    for u in config.no_flair :
-        r.subreddit('TownofSalemgame').flair.delete(u)
-
-    #print ("Running bot") #Left over from debugging
-    now = get_time()
-    crt = get_comment_list()
-    
-    # Checking comments will likely fail because the bot will try to read the title of a comment, which raises an
-    # exception. Might be doable with try/except statements
-    '''
-    for comment in r.subreddit('TownofSalemgame').comments(limit = chknum) : #Fetch comments
-    
-        # This makes it so that triggers are not case sensitive. We make everything in the comment lowecase.
-        b = comment.body.lower()
-        
-        # Make sure the author isn't in the blacklist and that we haven't already replied to the comment.
-        # We also don't want to try to reply to locked/archived comments because that will throw an error.
-        # We will also check that the user actually wants a definition so the bot doesn't reply to everyone who mentions
-        # VFR. Yes, this if statement is long, but that's to prevent the stupidly indented body of code that happened in
-        # SUEB because Python enforces indentation.
-        if c.author not in config.banned and c.id not in crt and c.locked == False and c.archived == False : 
-            check_triggers(chknum, time, c, b)
-    '''
-    #print ("Checking " + str(chknum) + " comments")
-    for c in r.subreddit('TownofSalemgame').comments(limit=chknum):
-        b = c.body.lower()
-        if c.author not in config.blacklisted and c.author.name != "ToS_Helper_Bot"\
-                and c.id not in crt \
-                and not c.locked \
-                and not c.archived \
-                and ("what is" in b or "what's" in b or "!def" in b or "how does" in b or ("how" in b and "s" in b and "?" in b))\
-                and (len(b) < 50 or "!def" in b) :
-            crt = get_comment_list()
-            check_triggers(crt, now, c, b)
-        elif c.id not in crt and ("!tb" in b or "!rep" in b) and c.author.name not in config.blacklisted and c.author.name != "ToS_Helper_Bot" :
-            print (c.author.name + " queried reports")
-            payload = b.split(' ')
-            if len(payload) > 3 and len(payload) < 10 :
-                c.reply("Invalid syntax. The correct syntax is `!reports [username]`, without the brackets. Please use your Town of Salem username and *not* your Reddit or Steam username. For help or general information, run `!reports`" + config.signature)
-            elif len(payload) == 1 :
-                c.reply("INFORMATION ON `!reports`:\n\n`!reports` allows you to query Town of Salem users' reports. To query someone's reports, run `!reports [username]`. Your reports will be returned in a PM, unless you are a designated user (mods and prominent users), are the OP of the original post, or are commenting in the designated reports-fetching megathread, you will receive your reports in a PM. "
-                        " If you are posting in the megathread and wish to receive your reports in a PM, use `!reports [username] pm`. For example, to query NateNate60's reports in a PM, run `!reports NateNate60 pm`." +
-                        " The bot works by passing commands to [TurdPile](https://reddit.com/user/turdpile]'s TrialBot, which runes on the Town of Salem Trial System Discord server. Currently, the bot will only return guilty reports." +
-                        ' If no guilty reports are found *or the username does not exist*, the bot will return "no results found". This does *not* mean that the user has never been reported or that all the reports against them were found' +
-                        " to be not guilty. It just means that no reports were found to be guilty yet. For details on how the Trial System works, just ask " + '"how does the trial system work?"' + config.signature)
-            elif len(payload) < 10 :
-                if len(payload) == 2 :
-                    payload.append('')
-                if "[" in payload[1] or "]" in payload[1] or "/" in payload[1] :
-                    c.reply("Invalid syntax. Please try again without the brackets. Run `!reports` by itself for more info." + config.signature)
-                    crt = write_comment_list(c.id, crt)
-                    continue
-                with open ("reportsqueue.txt", 'w') as rq :
-                    rq.write(payload[1])
-                time.sleep(7)
-                with open ("reports.json", 'r') as rj :
-                    reports = json.load(rj)
-                    replymessage = 'Fetched ' + str(len(reports)) + " reports " + 'against ' + payload[1] + " via [TurdPile](https://reddit.com/user/turdpile)'s TrialBot.\n\n"
-                    if len(reports) == 0 :
-                        replymessage = replymessage +  "No guilty reports were found. This does not mean that there were no reports, or that all pending reports were found innocent. For more information on this command, run `!reports` by itself."
-                    for report in reports :
-                        replymessage = replymessage + "- " + report + "\n"
-                    if (c.is_submitter or payload[2] == 'here' or c.author.name in config.approved or "access your reports here" in c.submission.title.lower()) and (payload[2] != "dm" and payload[2] != "pm" and payload[2] != "private"):
-                        c.reply(replymessage + config.signature)
-                    else :
-                        c.author.message("Reports request", replymessage + config.signature + "\n\nYou are receiving this in a PM because you were not the OP or a designated user, and you weren't commenting in the reports megathread, or because you specifically requested it.")
-            crt = write_comment_list(c.id, crt)
-    # Same thing as above, but checks posts instead of comments.
-    for post in r.subreddit('TownofSalemgame').new(limit=chknum):
-        #print(post.title) #Leftover from debugging
-        # BESIDES the first time when it checks 1000 posts, check if the poster is posting too much
-        if post.id not in crt :
-            crt = get_comment_list()
-            check_triggers(crt,now,post,post.selftext.lower())
-    
-    # Check the inbox for any direct requests (people summoning the bot by pinging it).
-    for message in r.inbox.all() :
-        # Check only unread mentions. That way, we don't have to keep track of what we've already checked. Reddit will
-        # do that for us.
-        if message.new:
-            
-            # If the user comments `!delete` and they are the OP, then delete the comment.
-            if "!del" in message.body.lower():
-                # Check if the parent comment was written by the bot and if the one asking to delete is the parent
-                # commenter
-                try :
-                    if message.parent().author.name == r.user.me()\
-                            and message.parent().parent().author.name == message.author.name and "because" not in message.parent().body.lower() :
-                        message.parent().mod.remove(spam = False, mod_note="User requested removal")
-                        message.reply("Successfully deleted." + config.signature)
-                except AttributeError :
-                    pass
-            # If the user is just running the !info or !blacklist command, we don't need to check anything else.
-            if "!info" in message.body.lower() :
-                message.reply("**NateNate60's ToS_Helper_Bot version" + version + "**\n\n" +
-                              "I give helpful definitions to certain terms used in Town of Salem. If you want me to" +
-                              " scan another user's comments for all terms, just ping me. I will then scan the" +
-                              " comment you replied to for any keywords and give definitions for each one. " +
-                              " Additionally, if your comment contains \"what is\", \"what's\", or the universal" +
-                              " trigger word `!def`, I will also reply with any helpful definitions. If you find" +
-                              " this annoying and would rather not have me reply to anything you say, simply comment" +
-                              "`!blacklist` and I will ignore your comments." +
-                              config.signature)
-                print(now + ": " + message.author.name + " ran !info")
-            # The bot will not check its own comments for triggers.
-            try :
-                if message.parent().author.name != r.user.me().name :
-                    # Check the parent comment for triggers.
-                    check_triggers(chknum, now, message.parent(), message.parent().body.lower())
-            except AttributeError :
-                pass
-            # REGARDLESS of whether we found any triggers or now, the message will be marked as read so we don't check
-            # it again.
-            message.mark_read()
-    
-    # Sleep for 5 seconds. We don't really get enough traffic to need this to be continuously running and this saves my
-    # server's computing power.
-    # This also mostly prevents problems with Reddit's rate limit.
-    time.sleep(5)
+def moderate_submission(s, body):
+    """
+    Check whether the given submission (comment or post) requires any automated moderator action.
+    :param s: the submission to check.
+    :param body: the body of the submission.
+    :return: None.
+    """
+    pass
 
 
-print("Starting ToS Helper Bot version " + version)
-r = login()
-# Check up to the last 1000 comments to avoid missing any comments that were made during downtime.
-tick = config.tick
-#if tick == 0:
-#    run_bot(r, chknum=10)
+def moderate_post(post):
+    """
+    Check whether the given post requires any automated moderator action.
+    :param post: the post to check.
+    :return: None.
+    """
+    check_author(post)
 
 
-while True:
-    tick += 1
-    now = get_time()
-    crt = get_comment_list()
-    try :
-        run_bot(r, config.chknum, tick)
-    except pex.ServerError:
-        print (now + ": The bot received an HTTP 503 response and will now restart.")
-    except praw.exceptions.RedditAPIException :
-        #For when the bot replies to a comment but it's been deleted
-        pass
-    except pex.RequestException :
-    # In case it ever does encounter issues with Reddit's rate limit
-        time.sleep(60)
-    '''
-    I don't like that this doesn't tell me where the exception is. I prefer it to just halt because that has saved me from spam so many times
+def process_pm(msg):
+    """
+    Process the given private message, taking action if necessary.
+    :param msg: the PM to process.
+    :return: None.
+    """
+    # If the user comments `!delete` and they are the OP, then delete the comment.
+    if "!del" in msg.body.lower():
+        try:
+            # Check if the parent comment was written by the bot and if the one asking to delete is the parent commenter
+            if msg.parent().author.name == session.user.me() and msg.parent().parent().author.name == msg.author.name
+                    and "because" not in msg.parent().body.lower():
+                msg.parent().mod.remove(spam=False, mod_note="User requested removal")
+                msg.reply("Successfully deleted." + settings.signature)
+        except AttributeError as err:
+            print("Error: caught AttributeError")
+            print(err)
 
-    except Exception as ex:
-        print(now + ":", "Exception when running tick", tick)
-        print(ex)
-    '''
-    if int(time.time())%86400 < 50 :
-        # Empty the dictionary every 24 hours
-        # Sometimes it's a bit slow to run so this 50 ensures it will clear the dictionary at least ONCE per day in that first minute.
-        # False negatives are better than false positives in this case.
-        submitters = {}
-        with open(wpath + 'submitters.json', 'w') as s:
-            s.write('{}')
+    # If the user is just running the !info or !blacklist command, we don't need to check anything else.
+    if "!info" in msg.body.lower():
+        msg.reply("**NateNate60's ToS_Helper_Bot version" + version + "**\n\n"
+                  "I give helpful definitions to certain terms used in Town of Salem. If you want me to"
+                  " scan another user's comments for all terms, just ping me. I will then scan the"
+                  " comment you replied to for any keywords and give definitions for each one."
+                  " Additionally, if your comment contains \"what is\", \"what's\", or the universal"
+                  " trigger word `!def`, I will also reply with any helpful definitions. If you find"
+                  " this annoying and would rather not have me reply to anything you say, simply comment"
+                  "`!blacklist` and I will ignore your comments." +
+                  settings.signature)
+        log(msg.author.name, "ran !info")
+    try:
+        # The bot will not check its own comments for triggers.
+        if msg.parent().author.name != session.user.me().name:
+            if msg.parent().id in get_comment_list():
+                log("User", msg.author.name, "asked for an already processed submission to be processed")
+            # We don't need to check for moderation triggers, since submissions to the subreddit we moderate have
+            # already been checked before this function is used in the run_bot function.
+            # A race condition might exist, but it would be extremely difficult to intentionally exploit.
+            help_submission(msg.parent(), msg.parent().body)
+            append_comment_list(msg.parent().id)
+    except AttributeError:
+        print("Error: caught AttributeError")
+        print(err)
 
-    
-    # This keeps track of and reports how many cycles the bot's gone through, but with decreasing frequency because
-    # it's less likely to crash the longer it's been running.
-    if tick == 1:
-        print(now + ":", "The bot has successfully completed one cycle.")
-    elif tick == 5:
-        print(now + ":", 'The bot has successfully completed 5 cycles.')
-    elif tick%10 == 0 and tick < 100:
-        print(now + ":", 'The bot has successfully completed', tick, "cycles.")
-    elif tick%100 == 0 and tick < 500:
-        print(now + ":", 'The bot has successfully completed', tick, "cycles.")
-    elif tick%500 == 0 and tick < 3000:
-        print(now + ":", 'The bot has successfully completed', tick, "cycles.")
-    elif tick%1000 == 0:
-        print(now + ":", 'The bot has successfully completed', tick, "cycles.")
+
+def check_author(post):
+    """
+    Check that the author of the given post hasn't exceeded the post limit and increment their daily post counter.
+    :param post: the post whose author to check.
+    :return: None.
+    """
+    with submitters:
+        cursor = submitters.execute("SELECT CASE WHEN date('now') == last_date THEN quantity ELSE 0 END FROM submitters"
+                                    " WHERE username=? LIMIT 1",
+                                    (post.author.name, ))
+        submitters.execute("INSERT INTO submitters (username, quantity) VALUES (?, 1)"
+                           " ON CONFLICT (username) DO UPDATE SET quantity = quantity + 1",
+                           (post.author.name, ))
+        submitters.commit()
+        result = cursor.fetchone()
+        if result is None:
+            quantity = 0
+        else:
+            (quantity, ) = result
+        if quantity >= settings.max_posts:
+            log("Removing post", post.id, "by", post.author.name, "since they have exceeded the daily post limit")
+            if not settings.read_only:
+                post.mod.remove()
+                post.reply("Unfortunately, your post has been removed because to prevent queue-flooding, we only allow "
+                           + str(settings.max_posts) + " posts per person per day." + settings.signature) \
+                    .mod.distinguish(sticky=True)
+
+
+def get_daily_post_count(user):
+    with submitters:
+        cursor = submitters.execute("SELECT CASE WHEN date('now') == last_date THEN quantity ELSE 0 END FROM submitters"
+                                    " WHERE username=? LIMIT 1",
+                                    (user, ))
+        result = cursor.fetchone()
+        if result is None:
+            quantity = 0
+        else:
+            (quantity, ) = result
+        return quantity
+
+
+def get_comment_list():
+    """
+    Load the list of comments the bot has already replied to.
+    This is to avoid replying to the same comment multiple times.
+    :return: the list of comments already replied to.
+    """
+    try:
+        with open(path.join(wpath, "comments.txt"), "r") as f:
+            comments_replied_to = f.read().split("\n")
+        return list(filter(None, comments_replied_to))
+    except FileNotFoundError:
+        # The file doesn't yet exist, but it will be written as soon as we append an ID
+        return []
+
+
+def append_comment_list(s_id):
+    """
+    Save the given submission ID as a comment that has already been replied to.
+    :param s_id: the ID of the submission to save.
+    :return: None.
+    """
+    with open(path.join(wpath, 'comments.txt'), 'a') as f:
+        f.write('\n' + s_id)
+
+
+def log(*msg, **kwargs):
+    """
+    Log the given message.
+    :param msg: The message to log.
+    :return: None.
+    """
+    print(datetime.datetime.fromtimestamp(time.time()).strftime('[%Y-%m-%d %H:%M:%S]'), *msg, **kwargs)
+
+
+if __name__ == "__main__":
+    log("Starting ToS Helper Bot version", version)
+    session = login()
+    # Check up to the last 1000 comments to avoid missing any comments that were made during downtime.
+    # Currently disabled because it would break the daily post limit check.
+    tick = settings.tick
+    # if tick == 0:
+    #    run_bot(r, chknum=1000)
+
+    while True:
+        tick += 1
+        run_bot(session)
+
+        # This keeps track of and reports how many cycles the bot's gone through, but with decreasing frequency because
+        # it's less likely to crash the longer it's been running.
+        if tick == 1:
+            log("The bot has successfully completed one cycle.")
+        elif tick == 5:
+            log('The bot has successfully completed 5 cycles.')
+        elif tick % 10 == 0 and tick < 100:
+            log('The bot has successfully completed', tick, "cycles.")
+        elif tick % 100 == 0 and tick < 500:
+            log('The bot has successfully completed', tick, "cycles.")
+        elif tick % 500 == 0 and tick < 3000:
+            log('The bot has successfully completed', tick, "cycles.")
+        elif tick % 1000 == 0:
+            log('The bot has successfully completed', tick, "cycles.")
+
+        # Sleep for 5 seconds. We don't really get enough traffic to need this to be continuously running and this saves
+        # my server's computing power.
+        # This also mostly prevents problems with Reddit's rate limit.
+        time.sleep(5)
