@@ -246,8 +246,9 @@ def process_pm(msg):
     if "!del" in msg.body.lower():
         try:
             # Check if the parent comment was written by the bot and if the one asking to delete is the parent commenter
-            if msg.parent().author.name == session.user.me() and msg.parent().parent().author.name == msg.author.name:
-                msg.parent().delete()
+            if msg.parent().author.name == session.user.me() and msg.parent().parent().author.name == msg.author.name
+                    and "because" not in msg.parent().body.lower():
+                msg.parent().mod.remove(spam=False, mod_note="User requested removal")
                 msg.reply("Successfully deleted." + settings.signature)
         except AttributeError as err:
             print("Error: caught AttributeError")
