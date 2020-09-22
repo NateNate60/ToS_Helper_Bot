@@ -23,3 +23,7 @@ read_only = True
 
 # List of users who abuse flairs and should not be allowed to have a flair.
 no_flair = []
+
+# Should the bot log to a file in addition to stdout? If set to true, the bot will write to log.txt as well. If false, the bot will
+# only log to stdout.
+logtofile = True
