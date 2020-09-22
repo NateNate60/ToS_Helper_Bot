@@ -52,7 +52,8 @@ def run_bot(r, chknum=settings.chknum):
     :return: None.
     """
     for u in settings.no_flair:
-        r.subreddit('TownofSalemgame').flair.delete(u)
+        if next(rsubreddit("TownofSalemgame").flair(redditor=u))['flair_text'] is None
+            r.subreddit('TownofSalemgame').flair.delete(u)
 
     crt = get_comment_list()
 
