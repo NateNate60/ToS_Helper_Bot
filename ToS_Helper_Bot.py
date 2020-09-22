@@ -128,21 +128,21 @@ def help_submission(s, body):
             if "[" in payload[1] or "]" in payload[1] or "/" in payload[1] :
                 c.reply("Invalid syntax. Please try again without the brackets. Run `!reports` by itself for more info." + settings.signature)
                 crt = write_comment_list(c.id, crt)
-                continue
-            with open ("reportsqueue.txt", 'w') as rq :
-                rq.write(payload[1])
-            time.sleep(7)
-            with open ("reports.json", 'r') as rj :
-                reports = json.load(rj)
-                replymessage = 'Fetched ' + str(len(reports)) + " reports " + 'against ' + payload[1] + " via [TurdPile](https://reddit.com/user/turdpile)'s TrialBot.\n\n"
-                if len(reports) == 0 :
-                    replymessage = replymessage +  "No guilty reports were found. This does not mean that there were no reports, or that all pending reports were found innocent. For more information on this command, run `!reports` by itself."
-                for report in reports :
-                    replymessage = replymessage + "- " + report + "\n"
-                if (c.is_submitter or payload[2] == 'here' or c.author.name in settings.approved or "access your reports here" in c.submission.title.lower()) and (payload[2] != "dm" and payload[2] != "pm" and payload[2] != "private"):
-                    c.reply(replymessage + settings.signature)
-                else :
-                    c.author.message("Reports request", replymessage + settings.signature + "\n\nYou are receiving this in a PM because you were not the OP or a designated user, and you weren't commenting in the reports megathread, or because you specifically requested it.")
+            else :
+                with open ("reportsqueue.txt", 'w') as rq :
+                    rq.write(payload[1])
+                time.sleep(7)
+                with open ("reports.json", 'r') as rj :
+                    reports = json.load(rj)
+                    replymessage = 'Fetched ' + str(len(reports)) + " reports " + 'against ' + payload[1] + " via [TurdPile](https://reddit.com/user/turdpile)'s TrialBot.\n\n"
+                    if len(reports) == 0 :
+                        replymessage = replymessage +  "No guilty reports were found. This does not mean that there were no reports, or that all pending reports were found innocent. For more information on this command, run `!reports` by itself."
+                    for report in reports :
+                        replymessage = replymessage + "- " + report + "\n"
+                    if (c.is_submitter or payload[2] == 'here' or c.author.name in settings.approved or "access your reports here" in c.submission.title.lower()) and (payload[2] != "dm" and payload[2] != "pm" and payload[2] != "private"):
+                        c.reply(replymessage + settings.signature)
+                    else :
+                        c.author.message("Reports request", replymessage + settings.signature + "\n\nYou are receiving this in a PM because you were not the OP or a designated user, and you weren't commenting in the reports megathread, or because you specifically requested it.")
 
     if "!rate" in b:
         payload = b.split(' ')
@@ -365,7 +365,7 @@ def log(*msg, **kwargs):
     """
     print (datetime.datetime.fromtimestamp(time.time()).strftime('[%Y-%m-%d %H:%M:%S]'), *msg, **kwargs)
 
-if not path.exists ('log.txt')
+if not path.exists ('log.txt') :
     with open ('log.txt','w') as l :
         l.write("This is where output from the bot will be logged, if settings.logtofile is set to true.\n\n")
 
