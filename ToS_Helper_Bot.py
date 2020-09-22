@@ -363,7 +363,7 @@ def log(*msg, **kwargs):
         with open ('log.txt', 'a') as l :
             l.write('\n' + logoutput)
     """
-    print (datetime.datetime.fromtimestamp(time.time()).strftime('[%Y-%m-%d %H:%M:%S]') + ' ' + *msg + ' ' + **kwargs)
+    print (datetime.datetime.fromtimestamp(time.time()).strftime('[%Y-%m-%d %H:%M:%S]'), *msg, **kwargs)
 
 if not path.exists ('log.txt')
     with open ('log.txt','w') as l :
