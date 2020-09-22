@@ -362,6 +362,9 @@ def log(*msg, **kwargs):
         with open ('log.txt', 'a') as l :
             l.write('\n' + logoutput)
 
+if not path.exists ('log.txt')
+    with open ('log.txt','w') as l :
+        l.write("This is where output from the bot will be logged, if settings.logtofile is set to true.\n\n")
 
 if __name__ == "__main__":
     log("Starting ToS Helper Bot version", version)
