@@ -181,23 +181,26 @@ def help_submission(s, body):
                 " know personally. Giving or asking for codes in this subreddit is not allowed." + settings.signature)
 
     if "freez" in b or "lag" in b or "disconnect" in b or "dc" in b and s.link_flair_text.strip().lower() == 'question':
-        log("User", s.author.name, "appears to be asking about freezing in submission", s.id)
-        if not settings.read_only:
-            s.reply("If your game seizes and stops responding, try one of the following fixes.\n\n"
-                    "* ON BROWSER: Try resizing the browser window a few times. Nobody is quite sure why this works,"
-                    " but it occasionally fixes connection issues and visual glitches. It may have to do with forcing"
-                    " the game to redraw."
-                    "\n* ON STEAM: Try verifying the game integrity. You can do this by going into your Steam library,"
-                    " then going into the game's Properties, then Local Files, then clicking the Verify Integrity"
-                    " button. You may also try resizing the game's window when this issue occurs."
-                    "\n* ON MOBILE: Try restarting your phone or re-installing the app."
-                    "\n* IN GENERAL: Wired connections are always going to be more stable than wireless ones. If"
-                    " possible, use a wired Ethernet connection where possible to prevent packet loss, which is often"
-                    " what causes disconnection issues."
-                    "The game doesn't deal with packet loss that well. This can occasionally happen even on strong"
-                    " Wi-Fi or cellular connections." +
-                    settings.signature)
-
+        if "abnormal" not in b:
+            log("User", s.author.name, "appears to be asking about freezing in submission", s.id)
+            if not settings.read_only:
+                s.reply("If your game seizes and stops responding, try one of the following fixes.\n\n"
+                        "* ON BROWSER: Try resizing the browser window a few times. Nobody is quite sure why this works,"
+                        " but it occasionally fixes connection issues and visual glitches. It may have to do with forcing"
+                        " the game to redraw."
+                        "\n* ON STEAM: Try verifying the game integrity. You can do this by going into your Steam library,"
+                        " then going into the game's Properties, then Local Files, then clicking the Verify Integrity"
+                        " button. You may also try resizing the game's window when this issue occurs."
+                        "\n* ON MOBILE: Try restarting your phone or re-installing the app."
+                        "\n* IN GENERAL: Wired connections are always going to be more stable than wireless ones. If"
+                        " possible, use a wired Ethernet connection where possible to prevent packet loss, which is often"
+                        " what causes disconnection issues."
+                        "The game doesn't deal with packet loss that well. This can occasionally happen even on strong"
+                        " Wi-Fi or cellular connections." +
+                        settings.signature)
+        else :
+            s.reply("If you're asking about the " + '"abnormal disconnect" error,' + " we aren't quite sure why this error occurs or what causes it, but the developers are " +
+                    "aware of the issue and are working on a resolution." + settings.signature)
     if "crash" in b or "error" in b or "bug" in b or "glitch" in b :
         print(time + ": " + c.author.name + " queried for crashing.")
         c.reply("If you're talking about an error in the game, please be aware that the developers no longer check this subreddit." +
