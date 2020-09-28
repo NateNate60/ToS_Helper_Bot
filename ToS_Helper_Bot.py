@@ -7,6 +7,7 @@ import datetime
 from os import path
 import sqlite3
 import time
+import json
 
 wpath = path.dirname(settings.__file__)
 
@@ -62,7 +63,7 @@ def run_bot(r, chknum=settings.chknum):
             continue
         #log("Processing comment", c.id, "by", c.author.name)
         moderate_submission(c, c.body)
-        if c.author not in settings.blacklisted and ("!def" in c.body or "what's" in c.body or "what is" in c.body or "whats" in c.body) and len(c.body) < 50 :
+        if c.author not in settings.blacklisted and ("!def" in c.body.lower() or "what's" in c.body.lower() or "what is" in c.body.lower() or "whats" in c.body.lower() or "!rep" in c.body.lower() or "!tb" in c.body.lower()) and (len(c.body.lower()) < 50 or "!def" in c.body.lower()) :
             help_submission(c, c.body)
         # Mark the comment as processed
         append_comment_list(c.id)
@@ -72,7 +73,7 @@ def run_bot(r, chknum=settings.chknum):
             continue
         #log("Processing post", post.id, "by", post.author.name)
         moderate_post(post)
-        body = post.name
+        body = post.name.lower()
         moderate_submission(post, body)
         if post.author not in settings.blacklisted:
             help_submission(post, body)
@@ -143,6 +144,7 @@ def help_submission(s, body):
                         s.reply(replymessage + settings.signature)
                     else :
                         s.author.message("Reports request", replymessage + settings.signature + "\n\nYou are receiving this in a PM because you were not the OP or a designated user, and you weren't commenting in the reports megathread, or because you specifically requested it.")
+               
 
     if "!rate" in b:
         payload = b.split(' ')
@@ -228,7 +230,7 @@ def moderate_submission(s, body):
     :param body: the body of the submission.
     :return: None.
     """
-    pass
+    
 
 
 def moderate_post(post):
@@ -238,7 +240,12 @@ def moderate_post(post):
     :return: None.
     """
     check_author(post)
-
+    
+    if "among us" in post.title.lower() :
+        post.mod.remove()
+        post.reply('Unfortunately, your post has been removed because Among Us memes and discussion are only allowed in the [Among Us megathread]' +
+                   "(https://reddit.com/r/TownofSalemgame/comments/j0ua5a/among_us_megathread/). If your post isn't about Among Us, please contact the moderators" +
+                   " to get your post restored." + config.signature).mod.distinguish(sticky=True)
 
 def process_pm(msg):
     """
@@ -280,8 +287,7 @@ def process_pm(msg):
             help_submission(msg.parent(), msg.parent().body)
             append_comment_list(msg.parent().id)
     except AttributeError:
-        print("Error: caught AttributeError")
-        print(err)
+        pass
 
 
 def check_author(post):
@@ -380,8 +386,10 @@ if __name__ == "__main__":
 
     while True:
         tick += 1
-        run_bot(session)
-
+        try :
+            run_bot(session)
+        except pex.ServerError:
+            pass
         # This keeps track of and reports how many cycles the bot's gone through, but with decreasing frequency because
         # it's less likely to crash the longer it's been running.
         if tick == 1:

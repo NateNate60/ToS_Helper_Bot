@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-import config
+from config import secrets
 import json
 import asyncio
 
@@ -37,6 +37,9 @@ async def on_message(message):
         reportsf = []
         reportsg = []
         for item in reports :
+            print (item)
+            if "Error fetching user reports" in item or 'There are no reports to display' in item:
+                continue
             reportsf.append(item.split('>')[1])
         for item in reportsf :
             reportsg.append(item.split(" '")[0]+")")
@@ -47,4 +50,4 @@ async def on_message(message):
 
 
 
-client.run(config.token)
+client.run(secrets.token)
