@@ -123,7 +123,7 @@ def help_submission(s, body):
                         settings.signature)
 
     if "!tb" in b or "!rep" in b:
-        print (s.author.name + " queried reports")
+        log (s.author.name + " queried reports")
         payload = b.split(' ')
         if len(payload) > 3 and len(payload) < 10 :
             s.reply("Invalid syntax. The correct syntax is `!reports [username]`, without the brackets. Please use your Town of Salem username and *not* your Reddit or Steam username. For help or general information, run `!reports`" + settings.signature)
@@ -155,15 +155,13 @@ def help_submission(s, body):
                     else :
                         s.author.message("Reports request", replymessage + settings.signature + "\n\nYou are receiving this in a PM because you were not the OP or a designated user, and you weren't commenting in the reports megathread, or because you specifically requested it.")
                
-    print("test")
+    
     if "!rate" in b:
-        print (b)
         payload = b.split(' ')
         if len(payload) == 2:
-            print ("good")
+            
             log("User", s.author.name, "asked for the rate limit of user", payload[1])
             if not settings.read_only:
-                print (get_daily_post_count(payload[1]))
                 s.reply(payload[1] + " has submitted " + str(get_daily_post_count(payload[1])) + " posts today."
                         "Once they post " + str(settings.max_posts) + " posts, subsequent posts will be removed."
                         "This resets at midnight UTC." + settings.signature)
@@ -343,7 +341,6 @@ def get_daily_post_count(user):
                                     " WHERE username=? LIMIT 1",
                                     (user, ))
         result = cursor.fetchone()
-        print (result)
         if result is None:
             quantity = 0
         else:
