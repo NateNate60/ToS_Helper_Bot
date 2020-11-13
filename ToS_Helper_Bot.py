@@ -63,7 +63,7 @@ def run_bot(r, chknum=settings.chknum):
             continue
         #log("Processing comment", c.id, "by", c.author.name)
         moderate_submission(c, c.body)
-        if c.author not in settings.blacklisted and ("!def" in c.body.lower() or "what's" in c.body.lower() or "what is" in c.body.lower() or "whats" in c.body.lower() or "!rep" in c.body.lower() or "!tb" in c.body.lower()) and (len(c.body.lower()) < 50 or "!def" in c.body.lower()) :
+        if c.author not in settings.blacklisted and ("!def" in c.body.lower() or "what's" in c.body.lower() or "what is" in c.body.lower() or "whats" in c.body.lower() or "!rep" in c.body.lower() or "!tb" in c.body.lower() or "!rate" in c.body.lower()) and (len(c.body.lower()) < 50 or "!def" in c.body.lower()) :
             help_submission(c, c.body)
         # Mark the comment as processed
         append_comment_list(c.id)
@@ -101,6 +101,16 @@ def help_submission(s, body):
     :return: None.
     """
     b = body.lower()
+    if b == None :
+        b = ''
+    try :
+        f = s.link_flair_text
+        if f == None :
+            f = ''
+        else :
+            f = f.lower()
+    except AttributeError :
+        f = ''
     if "!def" in b or ("what is" in b or "what's" in b or "how does" in b or ("how" in b and "s" in b and "?" in b)) and len(b) < 50:
         if "vfr" in b:
             log("User", s.author.name, "asked about VFR in submission", s.id)
@@ -128,7 +138,7 @@ def help_submission(s, body):
                 payload.append('')
             if "[" in payload[1] or "]" in payload[1] or "/" in payload[1] :
                 s.reply("Invalid syntax. Please try again without the brackets. Run `!reports` by itself for more info." + settings.signature)
-                crt = write_comment_list(c.id, crt)
+                crt = append_comment_list(s.id, crt)
             else :
                 with open ("reportsqueue.txt", 'w') as rq :
                     rq.write(payload[1])
@@ -145,12 +155,15 @@ def help_submission(s, body):
                     else :
                         s.author.message("Reports request", replymessage + settings.signature + "\n\nYou are receiving this in a PM because you were not the OP or a designated user, and you weren't commenting in the reports megathread, or because you specifically requested it.")
                
-
+    print("test")
     if "!rate" in b:
+        print (b)
         payload = b.split(' ')
         if len(payload) == 2:
+            print ("good")
             log("User", s.author.name, "asked for the rate limit of user", payload[1])
             if not settings.read_only:
+                print (get_daily_post_count(payload[1]))
                 s.reply(payload[1] + " has submitted " + str(get_daily_post_count(payload[1])) + " posts today."
                         "Once they post " + str(settings.max_posts) + " posts, subsequent posts will be removed."
                         "This resets at midnight UTC." + settings.signature)
@@ -183,7 +196,7 @@ def help_submission(s, body):
                 "give then 5 free games. However, if they break the rules and get banned, you'll get a suspension as well! Only give codes to people you" +
                 " know personally. Giving or asking for codes in this subreddit is not allowed." + settings.signature)
 
-    if "freez" in b or "lag" in b or "disconnect" in b or "dc" in b and s.link_flair_text.lower() == 'question':
+    if "freez" in b or "lag" in b or "disconnect" in b or "dc" in b and (f == 'question' or f == '' or f == 'technical issue / bug'):
         if "abnormal" not in b:
             log("User", s.author.name, "appears to be asking about freezing in submission", s.id)
             if not settings.read_only:
@@ -204,7 +217,7 @@ def help_submission(s, body):
         else :
             s.reply("If you're asking about the " + '"abnormal disconnect" error,' + " we aren't quite sure why this error occurs or what causes it, but the developers are " +
                     "aware of the issue and are working on a resolution." + settings.signature)
-    if "crash" in b or "error" in b or "bug" in b or "glitch" in b :
+    if "crash" in b or "error" in b or "bug" in b or "glitch" in b or f == 'technical issue / bug':
         log(s.author.name + " queried for crashing.")
         s.reply("If you're talking about an error in the game, please be aware that the developers no longer check this subreddit." +
                 " Please send bug reports to the developers on the official Town of Salem forums.\n\n [General bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=10) \n\n [Mobile bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=60)" +
@@ -245,7 +258,7 @@ def moderate_post(post):
         post.mod.remove()
         post.reply('Unfortunately, your post has been removed because Among Us memes and discussion are only allowed in the [Among Us megathread]' +
                    "(https://reddit.com/r/TownofSalemgame/comments/j0ua5a/among_us_megathread/). If your post isn't about Among Us, please contact the moderators" +
-                   " to get your post restored." + config.signature).mod.distinguish(sticky=True)
+                   " to get your post restored." + settings.signature).mod.distinguish(sticky=True)
 
 def process_pm(msg):
     """
@@ -299,10 +312,10 @@ def check_author(post):
     with submitters:
         cursor = submitters.execute("SELECT CASE WHEN date('now') == last_date THEN quantity ELSE 0 END FROM submitters"
                                     " WHERE username=? LIMIT 1",
-                                    (post.author.name, ))
+                                    (post.author.name.lower(), ))
         submitters.execute("INSERT INTO submitters (username, quantity) VALUES (?, 1)"
                            " ON CONFLICT (username) DO UPDATE SET quantity = quantity + 1",
-                           (post.author.name, ))
+                           (post.author.name.lower(), ))
         submitters.commit()
         result = cursor.fetchone()
         if result is None:
@@ -319,11 +332,18 @@ def check_author(post):
 
 
 def get_daily_post_count(user):
+    """
+    Fetch the number of posts a certain user has made today.
+    :param user: The username of the user.
+    :return: The integer number of posts the user has made today.
+    """
+    user = user.lower()
     with submitters:
         cursor = submitters.execute("SELECT CASE WHEN date('now') == last_date THEN quantity ELSE 0 END FROM submitters"
                                     " WHERE username=? LIMIT 1",
                                     (user, ))
         result = cursor.fetchone()
+        print (result)
         if result is None:
             quantity = 0
         else:
@@ -389,6 +409,8 @@ if __name__ == "__main__":
         try :
             run_bot(session)
         except pex.ServerError:
+            pass
+        except pex.RequestException :
             pass
         # This keeps track of and reports how many cycles the bot's gone through, but with decreasing frequency because
         # it's less likely to crash the longer it's been running.
