@@ -1,6 +1,9 @@
 # The last thing we want is to accidentally commit all the authentication secrets
 secrets.py
 
+# Useless to commit settings.py since a template is already avaiable on the Github repo
+settings.py
+
 # We don't want to clutter the repository with data files either
 *.sqlite3
 comments.txt
