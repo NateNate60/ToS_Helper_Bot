@@ -25,6 +25,13 @@ with submitters:
                        " quantity INTEGER NOT NULL,"
                        " last_date TEXT NOT NULL DEFAULT CURRENT_DATE)")
 
+# This exception will be raised when a post for while Rule 11 applies is encountered, but it's not time to remove it yet.
+# It MUST be caught when moderate_post() is run.
+#                 except RuleElevenTimer : continue # Continue to the next post
+# IT should not be used for any other purpose.
+class RuleElevenTimer(Exception) : pass
+
+
 
 def login():
     """
@@ -72,7 +79,8 @@ def run_bot(r, chknum=settings.chknum):
         if post.id in crt:
             continue
         #log("Processing post", post.id, "by", post.author.name)
-        moderate_post(post)
+        try : moderate_post(post)
+        except RuleElevenTimer : continue #If the R11 timer isn't up yet, DO NOT append_comment_list or anything else, just go to the next post.
         body = post.name.lower()
         moderate_submission(post, body)
         if post.author not in settings.blacklisted:
@@ -253,11 +261,17 @@ def moderate_post(post):
     check_author(post)
 
     if post.link_flair_text == "Win Screen" and len(post.title) < 30:
-        if comment.created_utc > datetime.datetime.now(datetime.timezone.utc) - 1800 :
-            post.mod.remove()
-            post.reply("Unfortunately, your post hass been removed because we require all winscreens to be accompanied by an interesting backstory. If you've added a backstory, please send modmail" +
-                         " or mention u/NateNate60 to get your post restored." + settings.signature)
-        else : continue
+        if post.created_utc < int(time.time()) - 1800 :
+            ok = False
+            for comment in post.comments :
+                if comment.author.name == post.author.name :
+                    ok = True; break
+            if not ok:
+                post.mod.remove()
+                log("Removed post by", post.author.name, "for rule 11 violation.")
+                post.reply("Unfortunately, your post has been removed because we require all winscreens to be accompanied by an interesting backstory. If you've added a backstory, please send modmail" +
+                             " or mention u/NateNate60 to get your post restored." + settings.signature).mod.distinguish(sticky=True)
+        else : raise RuleElevenTimer
 
     if "among us" in post.title.lower() :
         post.mod.remove()
