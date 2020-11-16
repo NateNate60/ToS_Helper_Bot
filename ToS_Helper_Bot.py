@@ -258,7 +258,6 @@ def moderate_post(post):
     :param post: the post to check.
     :return: None.
     """
-    check_author(post)
 
     if post.link_flair_text == "Win Screen" and len(post.title) < 30:
         if post.created_utc < int(time.time()) - 1800 :
@@ -278,6 +277,8 @@ def moderate_post(post):
         post.reply('Unfortunately, your post has been removed because Among Us memes and discussion are only allowed in the [Among Us megathread]' +
                    "(https://reddit.com/r/TownofSalemgame/comments/j0ua5a/among_us_megathread/). If your post isn't about Among Us, please contact the moderators" +
                    " to get your post restored." + settings.signature).mod.distinguish(sticky=True)
+    check_author(post)
+
 
 def process_pm(msg):
     """
