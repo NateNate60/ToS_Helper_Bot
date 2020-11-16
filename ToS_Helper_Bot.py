@@ -251,7 +251,14 @@ def moderate_post(post):
     :return: None.
     """
     check_author(post)
-    
+
+    if post.link_flair_text == "Win Screen" and len(post.title) < 30:
+        if comment.created_utc > datetime.datetime.now(datetime.timezone.utc) - 1800 :
+            post.mod.remove()
+            post.reply("Unfortunately, your post hass been removed because we require all winscreens to be accompanied by an interesting backstory. If you've added a backstory, please send modmail" +
+                         " or mention u/NateNate60 to get your post restored." + settings.signature)
+        else : continue
+
     if "among us" in post.title.lower() :
         post.mod.remove()
         post.reply('Unfortunately, your post has been removed because Among Us memes and discussion are only allowed in the [Among Us megathread]' +
