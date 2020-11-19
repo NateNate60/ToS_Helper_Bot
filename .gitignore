@@ -332,3 +332,4 @@ pip-selfcheck.json
 reportsqueue.txt
 reports.json
 log.txt
+config/settings.py
