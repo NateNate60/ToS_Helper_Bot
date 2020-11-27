@@ -277,7 +277,8 @@ def moderate_post(post):
         post.reply('Unfortunately, your post has been removed because Among Us memes and discussion are only allowed in the [Among Us megathread]' +
                    "(https://reddit.com/r/TownofSalemgame/comments/j0ua5a/among_us_megathread/). If your post isn't about Among Us, please contact the moderators" +
                    " to get your post restored." + settings.signature).mod.distinguish(sticky=True)
-    check_author(post)
+    try : check_author(post)
+    except AttributeError : pass #I have no idea why it sometimes throws this error but it does.
 
 
 def process_pm(msg):
