@@ -28,7 +28,7 @@ with submitters:
 # This exception will be raised when a post for while Rule 11 applies is encountered, but it's not time to remove it yet.
 # It MUST be caught when moderate_post() is run.
 #                 except RuleElevenTimer : continue # Continue to the next post
-# IT should not be used for any other purpose.
+# It should not be used for any other purpose.
 class RuleElevenTimer(Exception) : pass
 
 
@@ -60,7 +60,7 @@ def run_bot(r, chknum=settings.chknum):
     :return: None.
     """
     for u in settings.no_flair:
-        if next(rsubreddit("TownofSalemgame").flair(redditor=u))['flair_text'] is None :
+        if next(r.subreddit("TownofSalemgame").flair(redditor=u))['flair_text'] is None :
             r.subreddit('TownofSalemgame').flair.delete(u)
 
     crt = get_comment_list()
@@ -146,7 +146,7 @@ def help_submission(s, body):
                 payload.append('')
             if "[" in payload[1] or "]" in payload[1] or "/" in payload[1] :
                 s.reply("Invalid syntax. Please try again without the brackets. Run `!reports` by itself for more info." + settings.signature)
-                crt = append_comment_list(s.id, crt)
+                append_comment_list(s.id)
             else :
                 with open ("reportsqueue.txt", 'w') as rq :
                     rq.write(payload[1])
@@ -254,7 +254,7 @@ def moderate_submission(s, body):
     body = body.lower()
 
     if s.author.comment_karma < 100 and ("sey" in body or "church" in body or "saint" in body) :
-        r.subreddit('TownofSalemgame').banned.add(s.user.name, ban_reason='Potential spam account', 
+        session.subreddit('TownofSalemgame').banned.add(s.user.name, ban_reason='Potential spam account', 
                                                   ban_message="Your account has been banned as an anti-spam measure. All accounts less than 100 Karma may be automatically banned for saying things in a list of blacklisted words." +
                                                   " We had to put this rule in place due to rampant trolling and ban evasion. If you believe this is a mistake and you **are not** a spammer or troll, " +
                                                   "then we apologise for wrongfully banning you.\n\n[IF YOU WERE WRONGLY BANNED CLICK HERE](https://www.reddit.com/message/compose?to=r/townofsalemgame&subject=Wrongful%20automatic%20ban)")
