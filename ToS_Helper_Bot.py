@@ -287,7 +287,7 @@ def moderate_post(post):
                    "(https://reddit.com/r/TownofSalemgame/comments/j0ua5a/among_us_megathread/). If your post isn't about Among Us, please contact the moderators" +
                    " to get your post restored." + settings.signature).mod.distinguish(sticky=True)
     try : check_author(post)
-    except AttributeError : pass #I have no idea why it sometimes throws this error but it does.
+    except AttributeError : pass #This error occasionally gets thrown when the post.author ends up being None. I don't know why this happens but we "handle" it here.
 
 
 def process_pm(msg):
