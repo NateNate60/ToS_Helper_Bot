@@ -268,7 +268,7 @@ def moderate_post(post):
     :return: None.
     """
 
-    if post.link_flair_text == "Win Screen" and len(post.title) < 30:
+    if post.link_flair_text == "Win Screen" and len(post.title) < 50:
         if post.created_utc < int(time.time()) - 1800 :
             ok = False
             for comment in post.comments :
