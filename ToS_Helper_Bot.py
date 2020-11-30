@@ -274,6 +274,7 @@ def moderate_post(post):
             for comment in post.comments :
                 if comment.author.name == post.author.name :
                     ok = True; break
+            if len(post.selftext) > 100 : ok = True
             if not ok:
                 post.mod.remove()
                 log("Removed post by", post.author.name, "for rule 11 violation.")
