@@ -276,18 +276,23 @@ def moderate_post(post):
         post.mod.remove()
 
     if post.link_flair_text == "Win Screen" and len(post.title) < 50:
-        if post.created_utc < int(time.time()) - 1800 :
-            ok = False
-            for comment in post.comments :
-                if comment.author.name == post.author.name :
-                    ok = True; break
-            if len(post.selftext) > 100 : ok = True
-            if not ok:
-                post.mod.remove()
-                log("Removed post by", post.author.name, "for rule 11 violation.")
-                post.reply("Unfortunately, your post has been removed because we require all winscreens to be accompanied by an interesting backstory. If you've added a backstory, please send modmail" +
-                             " or mention u/NateNate60 to get your post restored." + settings.signature).mod.distinguish(sticky=True)
-        else : raise RuleElevenTimer
+        if post.created_utc < int(time.time()) - 5 :
+            post.author.message("Rule 11 reminder","This is an automated message to remind you that we require all win screen posts to be accompanied by a backstory. " +
+                                "If you submitted the post as a text post, please add a short backstory in the post. Otherwise, you can comment your backstory anywhere in your post.\n\n"
+                                "[Link to your post](" + post.permalink + ")", from_subreddit="townofsalemgame")
+        else :
+            if post.created_utc < int(time.time()) - 1800 :
+                ok = False
+                for comment in post.comments :
+                    if comment.author.name == post.author.name :
+                        ok = True; break
+                if len(post.selftext) > 100 : ok = True
+                if not ok:
+                    post.mod.remove()
+                    log("Removed post by", post.author.name, "for rule 11 violation.")
+                    post.reply("Unfortunately, your post has been removed because we require all winscreens to be accompanied by an interesting backstory. If you've added a backstory, please send modmail" +
+                                " or mention u/NateNate60 to get your post restored." + settings.signature).mod.distinguish(sticky=True)
+            else : raise RuleElevenTimer
 
     if "among us" in post.title.lower() :
         post.mod.remove()
