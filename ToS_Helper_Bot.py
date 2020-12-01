@@ -270,7 +270,7 @@ def moderate_post(post):
     if "password" in post.title.lower() :
         post.reply("Hello! It appears you are asking about having to reset your Town of Salem password. This is because BMG has raised the minimum" +
                    " requirements for passwords so everyone has to set a new one. Your new password must contain:\n\n- At least 10 characters\n"+
-                   "- Upper and lowercase letters\n- At least one number\n- A special character that isn't " + '"+", "*", or "^"\n\n' +
+                   "- Upper and lowercase letters\n- At least one number\n- A special character that isn't " + '"+", "\*", or "\^"\n\n' +
                    "You can read the official BMG post on the official forums [here](https://www.blankmediagames.com/phpbb/viewtopic.php?f=11&t=113310)" + 
                    settings.signature).mod.distinguish(sticky=True)
         post.mod.remove()
