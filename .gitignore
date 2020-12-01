@@ -333,3 +333,5 @@ reportsqueue.txt
 reports.json
 log.txt
 config/settings.py
+config/secrets.py
+config/settings.py
