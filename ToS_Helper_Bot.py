@@ -252,8 +252,15 @@ def moderate_submission(s, body):
     
     # It is easier to work with non-case sensitive body texts than with ones with mixed case.
     body = body.lower()
+    try :
+        author = s.author
+        author.comment_karma #Check if the author's account still exists
+    except pex.NotFound :
+        #If NotFound is raised, the user is either banned sitewide or deleted their account.
+        #So no further action can be taken. We immediately return 0, which is discarded.
+        return 0
 
-    if s.author.comment_karma < 100 and ("sey" in body or "church" in body or "saint" in body) :
+    if session.redditor(author).comment_karma < 100 and ("sey" in body or "church" in body or "saint" in body) :
         session.subreddit('TownofSalemgame').banned.add(s.user.name, ban_reason='Potential spam account', 
                                                   ban_message="Your account has been banned as an anti-spam measure. All accounts less than 100 Karma may be automatically banned for saying things in a list of blacklisted words." +
                                                   " We had to put this rule in place due to rampant trolling and ban evasion. If you believe this is a mistake and you **are not** a spammer or troll, " +
