@@ -25,6 +25,8 @@ with submitters:
                        " quantity INTEGER NOT NULL,"
                        " last_date TEXT NOT NULL DEFAULT CURRENT_DATE)")
 
+
+
 # This exception will be raised when a post for while Rule 11 applies is encountered, but it's not time to remove it yet.
 # It MUST be caught when moderate_post() is run.
 #                 except RuleElevenTimer : continue # Continue to the next post
@@ -284,9 +286,10 @@ def moderate_post(post):
 
     if post.link_flair_text == "Win Screen" and len(post.title) < 50:
         if post.created_utc > int(time.time()) - 5 :
-            post.author.message("Rule 11 reminder","This is an automated message to remind you that we require all win screen posts to be accompanied by a backstory. " +
-                                "If you submitted the post as a text post, please add a short backstory in the post. Otherwise, you can comment your backstory anywhere in your post.\n\n"
-                                "[Link to your post](" + post.permalink + ")", from_subreddit="townofsalemgame")
+            post.author.message("Rule 11 reminder","This is an automated message to remind you that we require all win screen posts to be accompanied by a backstory. Your post hasn't been removed, but it will be" +
+                                " automatically removed in 30 minutes if you don't add a backstory. " +
+                                "If you submitted the post as a text post, please add a short backstory in the post. Or, you can comment your backstory anywhere in your post.\n\n"
+                                "[Link to your post](" + post.permalink + ")")
             raise RuleElevenTimer
         else :
             if post.created_utc < int(time.time()) - 1800 :
