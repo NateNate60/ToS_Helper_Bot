@@ -270,8 +270,7 @@ def moderate_submission(s, body):
         s.mod.remove()
     
     with submitters:
-        cursor = submitters.execute("SELECT CASE WHEN date('now') == last_date THEN quantity ELSE 0 END FROM submitters"
-                                    " WHERE username=? LIMIT 1",
+        cursor = submitters.execute("SELECT quantity FROM submitters WHERE username=?",
                                     (s.author.name.lower(), ))
         #submitters.commit()
         result = cursor.fetchone()
