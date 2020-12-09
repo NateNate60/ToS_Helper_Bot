@@ -268,6 +268,21 @@ def moderate_submission(s, body):
                                                   " We had to put this rule in place due to rampant trolling and ban evasion. If you believe this is a mistake and you **are not** a spammer or troll, " +
                                                   "then we apologise for wrongfully banning you.\n\n[IF YOU WERE WRONGLY BANNED CLICK HERE](https://www.reddit.com/message/compose?to=r/townofsalemgame&subject=Wrongful%20automatic%20ban)")
         s.mod.remove()
+    
+    with submitters:
+        cursor = submitters.execute("SELECT CASE WHEN date('now') == last_date THEN quantity ELSE 0 END FROM submitters"
+                                    " WHERE username=? LIMIT 1",
+                                    (s.author.name.lower(), ))
+        #submitters.commit()
+        result = cursor.fetchone()
+        if result is None:
+            quantity = 0
+        else:
+            (quantity, ) = result
+        if quantity < 0 :
+            log("Removing post", post.id, "by", post.author.name, "since they are shadowbanned.")
+            if not settings.read_only:
+                post.mod.remove()
 
 
 def moderate_post(post):
@@ -343,6 +358,19 @@ def process_pm(msg):
                   "`!blacklist` and I will ignore your comments." +
                   settings.signature)
         log(msg.author.name, "ran !info")
+    if "!shadow" in msg.body.lower() :
+        payload = msg.body.lower().split()
+        if msg.author not in config.approved :
+            msg.reply("Permission denied: You are not authorised to make that command.")
+        elif len(payload) != 2 :
+            msg.reply("Syntax error. The correct syntax is `!shadowban [username]` without the brackets.")
+        else :
+            with submitters:
+                submitters.execute("INSERT INTO submitters (username, quantity) VALUES (?, -99999)"
+                                " ON CONFLICT (username) DO UPDATE SET quantity = -99999",
+                                (payload[1], ))
+                submitters.commit()
+            msg.reply("Successfully shadowbanned.")
     try:
         # The bot will not check its own comments for triggers.
         if msg.parent().author.name != session.user.me().name:
@@ -359,7 +387,7 @@ def process_pm(msg):
 
 def check_author(post):
     """
-    Check that the author of the given post hasn't exceeded the post limit and increment their daily post counter.
+    Check that the author of the given post hasn't exceeded the post limit and increment their daily post counter.\
     :param post: the post whose author to check.
     :return: None.
     """
