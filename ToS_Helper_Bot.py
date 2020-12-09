@@ -280,9 +280,9 @@ def moderate_submission(s, body):
         else:
             (quantity, ) = result
         if quantity < 0 :
-            log("Removing post", post.id, "by", post.author.name, "since they are shadowbanned.")
+            log("Removing submission", s.id, "by", s.author.name, "since they are shadowbanned.")
             if not settings.read_only:
-                post.mod.remove()
+                s.mod.remove()
 
 
 def moderate_post(post):
@@ -360,7 +360,7 @@ def process_pm(msg):
         log(msg.author.name, "ran !info")
     if "!shadow" in msg.body.lower() :
         payload = msg.body.lower().split()
-        if msg.author not in config.approved :
+        if msg.author not in settings.approved :
             msg.reply("Permission denied: You are not authorised to make that command.")
         elif len(payload) != 2 :
             msg.reply("Syntax error. The correct syntax is `!shadowban [username]` without the brackets.")
@@ -371,6 +371,7 @@ def process_pm(msg):
                                 (payload[1], ))
                 submitters.commit()
             msg.reply("Successfully shadowbanned.")
+            log(msg.author.name, "shadowbanned", payload[1])
     try:
         # The bot will not check its own comments for triggers.
         if msg.parent().author.name != session.user.me().name:
