@@ -263,7 +263,7 @@ def moderate_submission(s, body):
         return 0
 
     if session.redditor(author).comment_karma < 100 and ("sey" in body or "church" in body or "saint" in body) :
-        session.subreddit('TownofSalemgame').banned.add(s.user.name, ban_reason='Potential spam account', 
+        session.subreddit('TownofSalemgame').banned.add(s.author.name, ban_reason='Potential spam account', 
                                                   ban_message="Your account has been banned as an anti-spam measure. All accounts less than 100 Karma may be automatically banned for saying things in a list of blacklisted words." +
                                                   " We had to put this rule in place due to rampant trolling and ban evasion. If you believe this is a mistake and you **are not** a spammer or troll, " +
                                                   "then we apologise for wrongfully banning you.\n\n[IF YOU WERE WRONGLY BANNED CLICK HERE](https://www.reddit.com/message/compose?to=r/townofsalemgame&subject=Wrongful%20automatic%20ban)")
