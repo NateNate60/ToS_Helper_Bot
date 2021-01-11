@@ -493,7 +493,7 @@ if __name__ == "__main__":
             pass
         except pex.RequestException :
             pass
-        except pex.RedditAPIException :
+        except praw.exceptions.RedditAPIException :
             pass
         # This keeps track of and reports how many cycles the bot's gone through, but with decreasing frequency because
         # it's less likely to crash the longer it's been running.
