@@ -315,7 +315,8 @@ def moderate_post(post):
                 if not ok:
                     post.mod.remove()
                     log("Removed post by", post.author.name, "for rule 11 violation.")
-                    post.reply("Unfortunately, your post has been removed because we require all winscreens to be accompanied by an interesting backstory. If you've added a backstory, please send modmail" +
+                    post.reply("Unfortunately, your post has been removed because we require all winscreens to be accompanied by an interesting backstory. " +
+                               "Simply making a comment anywhere on your post will satisfy this requirement. Once you've added a backstory, please send modmail" +
                                 " or mention u/NateNate60 to get your post restored." + settings.signature).mod.distinguish(sticky=True)
             else : raise RuleElevenTimer
 
