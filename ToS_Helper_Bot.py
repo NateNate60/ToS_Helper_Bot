@@ -319,11 +319,7 @@ def moderate_post(post):
                                 " or mention u/NateNate60 to get your post restored." + settings.signature).mod.distinguish(sticky=True)
             else : raise RuleElevenTimer
 
-    if "among us" in post.title.lower() :
-        post.mod.remove()
-        post.reply('Unfortunately, your post has been removed because Among Us memes and discussion are only allowed in the [Among Us megathread]' +
-                   "(https://reddit.com/r/TownofSalemgame/comments/j0ua5a/among_us_megathread/). If your post isn't about Among Us, please contact the moderators" +
-                   " to get your post restored." + settings.signature).mod.distinguish(sticky=True)
+
     try : check_author(post)
     except AttributeError : pass #This error occasionally gets thrown when the post.author ends up being None. I don't know why this happens but we "handle" it here.
 
