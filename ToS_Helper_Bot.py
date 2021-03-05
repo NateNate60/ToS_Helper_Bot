@@ -140,7 +140,7 @@ def help_submission(s, body):
         elif len(payload) == 1 :
             s.reply("INFORMATION ON `!reports`:\n\n`!reports` allows you to query Town of Salem users' reports. To query someone's reports, run `!reports [username]`. Your reports will be returned in a PM, unless you are a designated user (mods and prominent users), are the OP of the original post, or are commenting in the designated reports-fetching megathread, you will receive your reports in a PM. "
                     " If you are posting in the megathread and wish to receive your reports in a PM, use `!reports [username] pm`. For example, to query NateNate60's reports in a PM, run `!reports NateNate60 pm`." +
-                    " The bot works by passing commands to [TurdPile](https://reddit.com/user/turdpile)'s TrialBot, which runes on the Town of Salem Trial System Discord server. Currently, the bot will only return guilty reports." +
+                    " The bot works by passing commands to [TurdPile](https://reddit.com/user/turdpile)'s TrialBot, which runs on the Town of Salem Trial System Discord server. Currently, the bot will only return guilty reports." +
                     ' If no guilty reports are found *or the username does not exist*, the bot will return "no results found". This does *not* mean that the user has never been reported or that all the reports against them were found' +
                     " to be not guilty. It just means that no reports were found to be guilty yet. For details on how the Trial System works, just ask " + '"how does the trial system work?"' + settings.signature)
         elif len(payload) < 10 :
