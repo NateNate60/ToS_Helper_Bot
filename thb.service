@@ -1,0 +1,16 @@
+[Unit]
+Description=ToS Helper Bot
+After=syslog.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/thb
+ExecStart=python3 /thb/ToS_Helper_Bot.py
+KillMode=process
+TimeoutSec=180
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target
