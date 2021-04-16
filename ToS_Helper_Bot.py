@@ -2,20 +2,18 @@ import praw
 from config import settings
 from config import secrets
 import prawcore.exceptions as pex
-import time
-import datetime
+#import time
+#import datetime
 from os import path
 import sqlite3
 import time
 import json
+import shadowban as sb
+import tlogging as log
 
 wpath = path.dirname(settings.__file__)
 
 version = "1.0"
-
-# Originally, in SUEB and WPB, several settings would be changed in the actual code
-# rather than in the config file, against common coding practice. Now, I'm just going to put those
-# variables in the config file and give them a new name.
 
 # We keep track of who's submitted how many posts with an SQLite 3 database
 submitters = sqlite3.connect(path.join(wpath, 'submitters.sqlite3'))
@@ -25,6 +23,9 @@ with submitters:
                        " quantity INTEGER NOT NULL,"
                        " last_date TEXT NOT NULL DEFAULT CURRENT_DATE)")
 
+# Originally, in SUEB and WPB, several settings would be changed in the actual code
+# rather than in the config file, against common coding practice. Now, I'm just going to put those
+# variables in the config file and give them a new name.
 
 
 # This exception will be raised when a post for while Rule 11 applies is encountered, but it's not time to remove it yet.
@@ -40,31 +41,18 @@ def login():
     Create the Reddit instance and authenticate the user agent using the credentials in config/secrets.py
     :return: the created Reddit instance
     """
-    log("Connecting to Reddit")
-    log("Authenticating...")
+    log.log("Connecting to Reddit")
+    log.log("Authenticating...")
     r = praw.Reddit(username=secrets.username,
                     password=secrets.password,
                     client_id=secrets.client_id,
                     client_secret=secrets.client_secret,
                     user_agent="ToS_Definition_Bot" + version)
-    log('Authenticated')
+    log.log('Authenticated')
     r.read_only = settings.read_only
     if r.read_only:
-        log("Running in read-only mode; intent will still be logged, but no action will be taken")
+        log.log("Running in read-only mode; intent will still be logged, but no action will be taken")
     return r
-
-
-def getevaders(r) :
-    """
-    Scrapes usernames from r/evadersToS for shadowbanning
-    :param r: the Reddit session.
-    :return: None
-    """
-    for post in r.subreddit('evaderstos').new(limit = 50) :
-        shadowban(post.author.name)
-        for comment in post.comments() :
-            shadowban(comment.author.name)
-    
 
 
 
@@ -136,24 +124,11 @@ def run_bot(r, chknum=settings.chknum):
             # Mark as read, since we don't gain anything from processing the same message multiple times.
             message.mark_read()
 
+    # Get and shadowban evaders
+    sb.getevaders(r, submitters)
 
-def shadowban(user) :
-    """
-    Shadowban a user.
-    :param user: the user 
-    """
-    with submitters:
-            cursor = submitters.execute("SELECT quantity FROM submitters WHERE username=?",
-                                    (user.lower(), ))
-            #submitters.commit()
-            result = cursor.fetchone()
-            if (not result < 0) and user != "Official_Moonman":
-                submitters.execute("INSERT INTO submitters (username, quantity) VALUES (?, -99999)"
-                                    " ON CONFLICT (username) DO UPDATE SET quantity = -99999",
-                                    (user.lower(), ))
-                submitters.commit()
 
-                log("Shadowbanned", user)
+
 
 
 def help_submission(s, body):
@@ -176,7 +151,7 @@ def help_submission(s, body):
         f = ''
     if "!def" in b or ("what is" in b or "what's" in b or "how does" in b or ("how" in b and "s" in b and "?" in b)) and len(b) < 50:
         if "vfr" in b:
-            log("User", s.author.name, "asked about VFR in submission", s.id)
+            log.log("User", s.author.name, "asked about VFR in submission", s.id)
             if not settings.read_only:
                 # I've borrowed Seth's language here.
                 s.reply("VFR stands for Voting For Roles. It is the act of voting someone up to the stand to get a role"
@@ -223,20 +198,20 @@ def help_submission(s, body):
         payload = b.split(' ')
         if len(payload) == 2:
             
-            log("User", s.author.name, "asked for the rate limit of user", payload[1])
+            log.log("User", s.author.name, "asked for the rate limit of user", payload[1])
             if not settings.read_only:
                 s.reply(payload[1] + " has submitted " + str(get_daily_post_count(payload[1])) + " posts today."
                         "Once they post " + str(settings.max_posts) + " posts, subsequent posts will be removed."
                         "This resets at midnight UTC." + settings.signature)
         elif len(payload) == 1:
-            log("User", s.author.name, "asked for their rate limit")
+            log.log("User", s.author.name, "asked for their rate limit")
             if not settings.read_only:
                 s.reply("You've posted " + str(get_daily_post_count(s.author.name)) + " times today. Once you post " +
                         str(settings.max_posts) + " posts, subsequent posts will be removed."
                         "This resets at midnight UTC." + settings.signature)
 
     if "new" in b and "player" in b or ("noob" in b and ("player" in b or "here" in b or "'m" in b or "im" in b)):
-        log("User", s.author.name, "appears to be a new player in submission", s.id)
+        log.log("User", s.author.name, "appears to be a new player in submission", s.id)
         if not settings.read_only:
             # Also borrowed from Seth
             s.reply("It seems like you're a new player to the game. "
@@ -250,7 +225,7 @@ def help_submission(s, body):
                     settings.signature)
 
     if "pay" in b or "cost" in b or "free " in b or "free?" in b :
-        log(s.author.name + " queried for Pay to Play")
+        log.log(s.author.name + " queried for Pay to Play")
         s.reply("If you're asking about whether the game is still free to play, the developers [moved the game to Pay to Play](https://blankmediagames.com/phpbb/viewtopic.php?f=11&t=92848)" +
                 " in November of 2018 to combat a flood of people spamming meaningless messages in games and making new accounts to avoid bans. You can " +
                 "still play for free if you create an account before November of 2018. If you want to refer a friend, the referral code feature allows you to " +
@@ -259,7 +234,7 @@ def help_submission(s, body):
 
     if "freez" in b or "lag" in b or "disconnect" in b or "dc" in b and (f == 'question' or f == '' or f == 'technical issue / bug'):
         if "abnormal" not in b:
-            log("User", s.author.name, "appears to be asking about freezing in submission", s.id)
+            log.log("User", s.author.name, "appears to be asking about freezing in submission", s.id)
             if not settings.read_only:
                 s.reply("If your game seizes and stops responding, try one of the following fixes.\n\n"
                         "* ON BROWSER: Try resizing the browser window a few times. Nobody is quite sure why this works,"
@@ -279,19 +254,19 @@ def help_submission(s, body):
             s.reply("If you're asking about the " + '"abnormal disconnect" error,' + " we aren't quite sure why this error occurs or what causes it, but the developers are " +
                     "aware of the issue and are working on a resolution." + settings.signature)
     if "crash" in b or "error" in b or "bug" in b or "glitch" in b or f == 'technical issue / bug':
-        log(s.author.name + " queried for crashing.")
+        log.log(s.author.name + " queried for crashing.")
         s.reply("If you're talking about an error in the game, please be aware that the developers no longer check this subreddit." +
                 " Please send bug reports to the developers on the official Town of Salem forums.\n\n [General bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=10) \n\n [Mobile bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=60)" +
                 "\n\n [Steam bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=78)" + settings.signature)
 
     if 'log in' in b or 'login' in b or 'logging in' in b or 'password' in b :
-        log(s.author.name + " queried for login issues")
+        log.log(s.author.name + " queried for login issues")
         s.reply("Are you having trouble logging into the game? Consider reading [this thread](https://www.blankmediagames.com/phpbb/viewtopic.php?f=11&t=105415&p=3342479#p3342479) on the Official Forums for help if your account was made" +
                 " before 2019. A password reset was required by BlankMediaGames for security reasons.\n\nHave you forgotten your password? You can [request a password reset here](https://www.blankmediagames.com/help/requestpasswordreset.php)." +
                 "\n\nNeed more help? If we can't solve your problem, you should [send an email to the developers](mailto:support@blankmediagames.zendesk.com)" + settings.signature)
 
     if "trial" in b and 'sys' in b :
-        log(s.author.name + " queried for the Trial System.")
+        log.log(s.author.name + " queried for the Trial System.")
         s.reply("If you're asking how the Trial System works, the Trial System is BlankMediaGame's system where regular Town of Salem players can help sort through reports and judge whether they are guilty or not. Anyone with more than "+
                 " 150 games played can vote on reports in the Trial System. [Click here to get to the Trial System](https://blankmediagames.com/Trial). If a majority of Jurors decide that a report is guilty, it will be refered to a Judge "+
                 "for final approval. If the judge decides that a penalty will be issued, then they can do so. For more questions, you can contact the Trial System administrator, [TurdPile](https://reddit.com/user/turdpile)." + settings.signature)
@@ -316,7 +291,7 @@ def moderate_submission(s, body):
         return 0
 
     if session.redditor(author).comment_karma < 100 and ("sey" in body or "church" in body or "saint" in body) :
-        shadowban(s.author.name)
+        sb.shadowban(s.author.name, submitters)
         #Previously, we would hard-ban them, but now we shadowban.
         """
         session.subreddit('TownofSalemgame').banned.add(s.author.name, ban_reason='Potential spam account', 
@@ -336,7 +311,7 @@ def moderate_submission(s, body):
         else:
             (quantity, ) = result
         if quantity < 0 :
-            log("Removing submission", s.id, "by", s.author.name, "since they are shadowbanned.")
+            log.log("Removing submission", s.id, "by", s.author.name, "since they are shadowbanned.")
             if not settings.read_only:
                 s.mod.remove()
 
@@ -371,7 +346,7 @@ def moderate_post(post):
                 if len(post.selftext) > 100 : ok = True
                 if not ok:
                     post.mod.remove()
-                    log("Removed post by", post.author.name, "for rule 11 violation.")
+                    log.log("Removed post by", post.author.name, "for rule 11 violation.")
                     post.reply("Unfortunately, your post has been removed because we require all winscreens to be accompanied by an interesting backstory. " +
                                "Simply making a comment anywhere on your post will satisfy this requirement. Once you've added a backstory, please send modmail" +
                                 " or mention u/NateNate60 to get your post restored." + settings.signature).mod.distinguish(sticky=True)
@@ -410,7 +385,7 @@ def process_pm(msg):
                   " this annoying and would rather not have me reply to anything you say, simply comment"
                   "`!blacklist` and I will ignore your comments." +
                   settings.signature)
-        log(msg.author.name, "ran !info")
+        log.log(msg.author.name, "ran !info")
     if "!shadow" in msg.body.lower() :
         payload = msg.body.lower().split()
         if msg.author not in settings.approved :
@@ -418,13 +393,13 @@ def process_pm(msg):
         elif len(payload) != 2 :
             msg.reply("Syntax error. The correct syntax is `!shadowban [username]` without the brackets.")
         else :
-            shadowban(payload[1])
+            sb.shadowban(payload[1], submitters)
             msg.reply("Successfully shadowbanned.")
     try:
         # The bot will not check its own comments for triggers.
         if msg.parent().author.name != session.user.me().name:
             if msg.parent().id in get_comment_list():
-                log("User", msg.author.name, "asked for an already processed submission to be processed")
+                log.log("User", msg.author.name, "asked for an already processed submission to be processed")
             # We don't need to check for moderation triggers, since submissions to the subreddit we moderate have
             # already been checked before this function is used in the run_bot function.
             # A race condition might exist, but it would be extremely difficult to intentionally exploit.
@@ -454,7 +429,7 @@ def check_author(post):
         else:
             (quantity, ) = result
         if quantity >= settings.max_posts:
-            log("Removing post", post.id, "by", post.author.name, "since they have exceeded the daily post limit")
+            log.log("Removing post", post.id, "by", post.author.name, "since they have exceeded the daily post limit")
             if not settings.read_only:
                 post.mod.remove()
                 post.reply("Unfortunately, your post has been removed because to prevent queue-flooding, we only allow "
@@ -505,28 +480,12 @@ def append_comment_list(s_id):
     with open(path.join(wpath, 'comments.txt'), 'a') as f:
         f.write('\n' + s_id)
 
-
-def log(*msg, **kwargs):
-    """
-    Log the given message.
-    :param msg: The message to log.
-    :return: None.
-    """
-    """
-    logoutput = datetime.datetime.fromtimestamp(time.time()).strftime('[%Y-%m-%d %H:%M:%S]') + ' ' + *msg + ' ' + **kwargs
-    print(logoutput)
-    if settings.logtofile :
-        with open ('log.txt', 'a') as l :
-            l.write('\n' + logoutput)
-    """
-    print (datetime.datetime.fromtimestamp(time.time()).strftime('[%Y-%m-%d %H:%M:%S]'), *msg, **kwargs)
-
 if not path.exists ('log.txt') :
     with open ('log.txt','w') as l :
         l.write("This is where output from the bot will be logged, if settings.logtofile is set to true.\n\n")
 
 if __name__ == "__main__":
-    log("Starting ToS Helper Bot version", version)
+    log.log("Starting ToS Helper Bot version", version)
     session = login()
     # Check up to the last 1000 comments to avoid missing any comments that were made during downtime.
     # Currently disabled because it would break the daily post limit check.
@@ -547,17 +506,17 @@ if __name__ == "__main__":
         # This keeps track of and reports how many cycles the bot's gone through, but with decreasing frequency because
         # it's less likely to crash the longer it's been running.
         if tick == 1:
-            log("The bot has successfully completed one cycle.")
+            log.log("The bot has successfully completed one cycle.")
         elif tick == 5:
-            log('The bot has successfully completed 5 cycles.')
+            log.log('The bot has successfully completed 5 cycles.')
         elif tick % 10 == 0 and tick < 100:
-            log('The bot has successfully completed', tick, "cycles.")
+            log.log('The bot has successfully completed', tick, "cycles.")
         elif tick % 100 == 0 and tick < 500:
-            log('The bot has successfully completed', tick, "cycles.")
+            log.log('The bot has successfully completed', tick, "cycles.")
         elif tick % 500 == 0 and tick < 3000:
-            log('The bot has successfully completed', tick, "cycles.")
+            log.log('The bot has successfully completed', tick, "cycles.")
         elif tick % 1000 == 0:
-            log('The bot has successfully completed', tick, "cycles.")
+            log.log('The bot has successfully completed', tick, "cycles.")
 
         # Sleep for 5 seconds. We don't really get enough traffic to need this to be continuously running and this saves
         # my server's computing power.
