@@ -32,7 +32,7 @@ with submitters:
 #                 except RuleElevenTimer : continue # Continue to the next post
 # It should not be used for any other purpose.
 class RuleElevenTimer(Exception) : pass
-
+arp = []
 
 
 def login():
@@ -54,6 +54,20 @@ def login():
     return r
 
 
+def getevaders(r) :
+    """
+    Scrapes usernames from r/evadersToS for shadowbanning
+    :param r: the Reddit session.
+    :return: None
+    """
+    for post in r.subreddit('evaderstos').new(limit = 50) :
+        shadowban(post.author.name)
+        for comment in post.comments() :
+            shadowban(comment.author.name)
+    
+
+
+
 def run_bot(r, chknum=settings.chknum):
     """
     Process all new submissions to the subreddit and all new messages.
@@ -61,9 +75,29 @@ def run_bot(r, chknum=settings.chknum):
     :param chknum: the maximum number of submissions of each type to check.
     :return: None.
     """
+
+
+    #Not needed anymore, but this was the Moonman section
+    """
+    # LE MOONMAN SECTION
+    if time.time() > 1617235200 and "Official_Moonman" not in r.subreddit('TownofSalemgame').moderator() and time.time() < 1617321600 :
+        print("Inviting")
+        r.subreddit('TownofSalemgame').moderator.invite('Official_Moonman', [])
+    for item in r.subreddit('TownofSalemgame').mod.log(limit=50, mod='Official_Moonman'):
+        if (item.action == 'removecomment' or item.action == 'spamcomment' or item.action == 'spamlink' or item.action == 'removelink') and item.target_permalink not in arp :
+            print("Alerting to " + item.target_permalink)
+            r.redditor(name="NateNate60").message('MOONMAN REMOVAL NOTICE',"Moonman removed " + item.target_permalink)
+            arp.append(item.target_permalink)
+    """
+
+
+
     for u in settings.no_flair:
         if next(r.subreddit("TownofSalemgame").flair(redditor=u))['flair_text'] is None :
             r.subreddit('TownofSalemgame').flair.delete(u)
+
+
+
 
     crt = get_comment_list()
 
@@ -101,6 +135,19 @@ def run_bot(r, chknum=settings.chknum):
             process_pm(message)
             # Mark as read, since we don't gain anything from processing the same message multiple times.
             message.mark_read()
+
+
+def shadowban(user) :
+    """
+    Shadowban a user.
+    :param user: the user 
+    """
+    with submitters:
+            submitters.execute("INSERT INTO submitters (username, quantity) VALUES (?, -99999)"
+                                " ON CONFLICT (username) DO UPDATE SET quantity = -99999",
+                                (payload[1], ))
+            submitters.commit()
+    log(msg.author.name, "shadowbanned", payload[1])
 
 
 def help_submission(s, body):
@@ -263,10 +310,14 @@ def moderate_submission(s, body):
         return 0
 
     if session.redditor(author).comment_karma < 100 and ("sey" in body or "church" in body or "saint" in body) :
+        shadowban(s.author.name)
+        #Previously, we would hard-ban them, but now we shadowban.
+        """
         session.subreddit('TownofSalemgame').banned.add(s.author.name, ban_reason='Potential spam account', 
                                                   ban_message="Your account has been banned as an anti-spam measure. All accounts less than 100 Karma may be automatically banned for saying things in a list of blacklisted words." +
                                                   " We had to put this rule in place due to rampant trolling and ban evasion. If you believe this is a mistake and you **are not** a spammer or troll, " +
                                                   "then we apologise for wrongfully banning you.\n\n[IF YOU WERE WRONGLY BANNED CLICK HERE](https://www.reddit.com/message/compose?to=r/townofsalemgame&subject=Wrongful%20automatic%20ban)")
+        """
         s.mod.remove()
     
     with submitters:
@@ -361,13 +412,8 @@ def process_pm(msg):
         elif len(payload) != 2 :
             msg.reply("Syntax error. The correct syntax is `!shadowban [username]` without the brackets.")
         else :
-            with submitters:
-                submitters.execute("INSERT INTO submitters (username, quantity) VALUES (?, -99999)"
-                                " ON CONFLICT (username) DO UPDATE SET quantity = -99999",
-                                (payload[1], ))
-                submitters.commit()
+            shadowban(payload[1])
             msg.reply("Successfully shadowbanned.")
-            log(msg.author.name, "shadowbanned", payload[1])
     try:
         # The bot will not check its own comments for triggers.
         if msg.parent().author.name != session.user.me().name:
