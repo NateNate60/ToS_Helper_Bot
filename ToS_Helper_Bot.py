@@ -143,11 +143,17 @@ def shadowban(user) :
     :param user: the user 
     """
     with submitters:
-            submitters.execute("INSERT INTO submitters (username, quantity) VALUES (?, -99999)"
-                                " ON CONFLICT (username) DO UPDATE SET quantity = -99999",
-                                (payload[1], ))
-            submitters.commit()
-    log(msg.author.name, "shadowbanned", payload[1])
+            cursor = submitters.execute("SELECT quantity FROM submitters WHERE username=?",
+                                    (user.lower(), ))
+            #submitters.commit()
+            result = cursor.fetchone()
+            if (not result < 0) and user != "Official_Moonman":
+                submitters.execute("INSERT INTO submitters (username, quantity) VALUES (?, -99999)"
+                                    " ON CONFLICT (username) DO UPDATE SET quantity = -99999",
+                                    (user.lower(), ))
+                submitters.commit()
+
+                log("Shadowbanned", user)
 
 
 def help_submission(s, body):
