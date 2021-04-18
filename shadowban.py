@@ -8,6 +8,8 @@ def getevaders(r, submitters) :
     for post in r.subreddit('evaderstos').new(limit = 50) :
         shadowban(post.author.name, submitters)
         for comment in post.comments :
+            if comment is None :
+                pass
             shadowban(comment.author.name, submitters)
     
 def shadowban(user, submitters) :
