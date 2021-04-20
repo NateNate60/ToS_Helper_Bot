@@ -291,7 +291,7 @@ def moderate_submission(s, body):
         return 0
 
     if session.redditor(author).comment_karma < 100 and ("sey" in body or "church" in body or "saint" in body) :
-        sb.shadowban(s.author.name, submitters)
+        sb.shadowban(s.author.name, submitters, r)
         #Previously, we would hard-ban them, but now we shadowban.
         """
         session.subreddit('TownofSalemgame').banned.add(s.author.name, ban_reason='Potential spam account', 
@@ -393,7 +393,7 @@ def process_pm(msg):
         elif len(payload) != 2 :
             msg.reply("Syntax error. The correct syntax is `!shadowban [username]` without the brackets.")
         else :
-            sb.shadowban(payload[1], submitters)
+            sb.shadowban(payload[1], submitters, r)
             msg.reply("Successfully shadowbanned.")
     try:
         # The bot will not check its own comments for triggers.

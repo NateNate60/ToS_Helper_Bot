@@ -6,17 +6,19 @@ def getevaders(r, submitters) :
     :return: None
     """
     for post in r.subreddit('evaderstos').new(limit = 50) :
-        shadowban(post.author.name, submitters)
+        shadowban(post.author.name, submitters, r)
         for comment in post.comments :
-            if comment is None :
+            try :
+                shadowban(comment.author.name, submitters, r)
+            except AttributeError :
                 pass
-            shadowban(comment.author.name, submitters)
     
-def shadowban(user, submitters) :
+def shadowban(user, submitters, r) :
     """
     Shadowban a user.
     :param user: the user 
     :param submitters: the SQLITE database of submitters
+    :param r: the Reddit session
     """
     with submitters:
             cursor = submitters.execute("SELECT quantity FROM submitters WHERE username=?",
@@ -32,5 +34,5 @@ def shadowban(user, submitters) :
                                     " ON CONFLICT (username) DO UPDATE SET quantity = -99999",
                                     (user.lower(), ))
                 submitters.commit()
-
+                r.subreddit('townofsalemgame').message("Shadowban notice", user + " has been shadowbanned.")
                 log.log("Shadowbanned", user)
