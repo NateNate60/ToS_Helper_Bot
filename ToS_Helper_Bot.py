@@ -161,7 +161,7 @@ def help_submission(s, body):
                         settings.signature)
 
     if "!tb" in b or "!rep" in b:
-        log (s.author.name + " queried reports")
+        log.log (s.author.name + " queried reports")
         payload = b.split(' ')
         if len(payload) > 3 and len(payload) < 10 :
             s.reply("Invalid syntax. The correct syntax is `!reports [username]`, without the brackets. Please use your Town of Salem username and *not* your Reddit or Steam username. For help or general information, run `!reports`" + settings.signature)
