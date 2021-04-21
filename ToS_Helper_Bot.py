@@ -120,7 +120,7 @@ def run_bot(r, chknum=settings.chknum):
         # Check only unread mentions. That way, we don't have to keep track of what we've already checked. Reddit will
         # do that for us.
         if message.new:
-            process_pm(message)
+            process_pm(message, r)
             # Mark as read, since we don't gain anything from processing the same message multiple times.
             message.mark_read()
 
@@ -357,7 +357,7 @@ def moderate_post(post):
     except AttributeError : pass #This error occasionally gets thrown when the post.author ends up being None. I don't know why this happens but we "handle" it here.
 
 
-def process_pm(msg):
+def process_pm(msg, r):
     """
     Process the given private message, taking action if necessary.
     :param msg: the PM to process.
