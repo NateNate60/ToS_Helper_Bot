@@ -34,5 +34,5 @@ def shadowban(user, submitters, r) :
                                     " ON CONFLICT (username) DO UPDATE SET quantity = -99999",
                                     (user.lower(), ))
                 submitters.commit()
-                r.subreddit('townofsalemgame').message("Shadowban notice", user + " has been shadowbanned.")
+                r.subreddit('townofsalemgame').message("Shadowban notice", "u/" + user + " has been shadowbanned.")
                 log.log("Shadowbanned", user)
