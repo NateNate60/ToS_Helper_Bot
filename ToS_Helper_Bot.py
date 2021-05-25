@@ -93,7 +93,7 @@ def run_bot(r, chknum=settings.chknum):
         if c.locked or c.archived or c.id in crt or c.author.name == "ToS_Helper_Bot":
             continue
         #log("Processing comment", c.id, "by", c.author.name)
-        moderate_submission(c, c.body)
+        moderate_submission(c, c.body, r)
         if c.author not in settings.blacklisted and ("!def" in c.body.lower() or "what's" in c.body.lower() or "what is" in c.body.lower() or "whats" in c.body.lower() or "!rep" in c.body.lower() or "!tb" in c.body.lower() or "!rate" in c.body.lower()) and (len(c.body.lower()) < 50 or "!def" in c.body.lower()) :
             help_submission(c, c.body)
         # Mark the comment as processed
@@ -106,7 +106,7 @@ def run_bot(r, chknum=settings.chknum):
         try : moderate_post(post)
         except RuleElevenTimer : continue #If the R11 timer isn't up yet, DO NOT append_comment_list or anything else, just go to the next post.
         body = post.name.lower()
-        moderate_submission(post, body)
+        moderate_submission(post, body, r)
         if post.author not in settings.blacklisted:
             help_submission(post, body)
         # Mark the post as processed
@@ -272,7 +272,7 @@ def help_submission(s, body):
                 "for final approval. If the judge decides that a penalty will be issued, then they can do so. For more questions, you can contact the Trial System administrator, [TurdPile](https://reddit.com/user/turdpile)." + settings.signature)
 
 
-def moderate_submission(s, body):
+def moderate_submission(s, body, r):
     """
     Check whether the given submission (comment or post) requires any automated moderator action.
     :param s: the submission to check.
