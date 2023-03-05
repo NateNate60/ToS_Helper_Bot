@@ -472,9 +472,15 @@ def get_comment_list():
     :return: the list of comments already replied to.
     """
     try:
-        with open(path.join(wpath, "comments.txt"), "r") as f:
+        with open(path.join(wpath, "comments.txt"), "r+") as f:
             comments_replied_to = f.read().split("\n")
             comments_replied_to = comments_replied_to[-500:]
+            s = ""
+            for i in comments_replied_to :
+                s += f"\n{i}"
+            f.seek(0)
+            f.write(s)
+            f.truncate()
         return list(filter(None, comments_replied_to))
     except FileNotFoundError:
         # The file doesn't yet exist, but it will be written as soon as we append an ID
