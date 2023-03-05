@@ -474,6 +474,7 @@ def get_comment_list():
     try:
         with open(path.join(wpath, "comments.txt"), "r") as f:
             comments_replied_to = f.read().split("\n")
+            comments_replied_to = comments_replied_to[-500:]
         return list(filter(None, comments_replied_to))
     except FileNotFoundError:
         # The file doesn't yet exist, but it will be written as soon as we append an ID
