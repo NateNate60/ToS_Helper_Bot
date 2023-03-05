@@ -2,14 +2,13 @@ import praw
 from config import settings
 from config import secrets
 import prawcore.exceptions as pex
-#import time
-#import datetime
 from os import path
 import sqlite3
 import time
 import json
 import shadowban as sb
 import tlogging as log
+import discord_communication as dc
 
 wpath = path.dirname(settings.__file__)
 
@@ -161,7 +160,8 @@ def help_submission(s, body):
                         settings.signature)
 
     if "!tb" in b or "!rep" in b:
-        log.log (s.author.name + " queried reports")
+        log.log (s.author.name + " queried reports at " + s.id)
+        append_comment_list(s.id)
         payload = b.split(' ')
         if len(payload) > 3 and len(payload) < 10 :
             s.reply("Invalid syntax. The correct syntax is `!reports [username]`, without the brackets. Please use your Town of Salem username and *not* your Reddit or Steam username. For help or general information, run `!reports`" + settings.signature)
@@ -176,22 +176,31 @@ def help_submission(s, body):
                 payload.append('')
             if "[" in payload[1] or "]" in payload[1] or "/" in payload[1] :
                 s.reply("Invalid syntax. Please try again without the brackets. Run `!reports` by itself for more info." + settings.signature)
-                append_comment_list(s.id)
             else :
-                with open ("reportsqueue.txt", 'w') as rq :
-                    rq.write(payload[1])
-                time.sleep(7)
-                with open ("reports.json", 'r') as rj :
-                    reports = json.load(rj)
-                    replymessage = 'Fetched ' + str(len(reports)) + " reports " + 'against ' + payload[1] + " via TrialBot.\n\n"
-                    if len(reports) == 0 :
-                        replymessage = replymessage +  "No guilty reports were found. This does not mean that there were no reports, or that all pending reports were found innocent. For more information on this command, run `!reports` by itself."
-                    for report in reports :
-                        replymessage = replymessage + "- " + report + "\n"
-                    if (s.is_submitter or payload[2] == 'here' or s.author.name in settings.approved or "access your reports here" in s.submission.title.lower()) and (payload[2] != "dm" and payload[2] != "pm" and payload[2] != "private"):
-                        s.reply(replymessage + settings.signature)
+
+                guilty_only = True
+                if ('*' == payload[1][0]) :
+                    payload[1] = payload[1][1:]
+                    guilty_only = False
+                elif ("all" in payload) :
+                    guilty_only = False
+                reports = dc.fetch_reports(payload[1], guilty_only)
+                replymessage = 'Fetched ' + str(len(reports)) + " reports " + 'against ' + payload[1] + " via TrialBot.\n\n"
+                if len(reports) == 0 :
+                    if ("all" not in payload) :
+                        replymessage +=  "No guilty reports were found. This does not mean that there were no reports, or that all pending reports were found innocent. For more information on this command, run `!reports` by itself."
                     else :
-                        s.author.message("Reports request", replymessage + settings.signature + "\n\nYou are receiving this in a PM because you were not the OP or a designated user, and you weren't commenting in the reports megathread, or because you specifically requested it.")
+                        replymessage += "No reports were found." 
+                for report in reports :
+                    replymessage = replymessage + "- " + report + "\n"
+                if (guilty_only) :
+                    replymessage += "\n\nTo query *all* reports, guilty or not, put \"all\" at the end of your query (e.g. `!reports TestUser all`) or a `*` in front of the username (e.g. `!reports *TestUser`)."
+                elif (len(reports) == 15) :
+                    replymessage += "\n\nFor technical reasons, only the last 15 reports are displayed."
+                if (s.is_submitter or payload[2] == 'here' or s.author.name in settings.approved or "access your reports here" in s.submission.title.lower()) and (payload[2] != "dm" and payload[2] != "pm" and payload[2] != "private"):
+                    s.reply(replymessage + settings.signature)
+                else :
+                    s.author.message("Reports request", replymessage + settings.signature + "\n\nYou are receiving this in a PM because you were not the OP or a designated user, and you weren't commenting in the reports megathread, or because you specifically requested it.")
                
     
     if "!rate" in b:
