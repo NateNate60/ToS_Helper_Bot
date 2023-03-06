@@ -1,17 +1,13 @@
 import tlogging as log
 def getevaders(r, submitters) :
     """
-    Scrapes usernames from r/evadersToS for shadowbanning
+    Originally scraped usernames from r/evadersToS for shadowbanning.
+    Now this no longer does anything as there is no longer any problem
+    with those people.
     :param r: the Reddit session.
     :return: None
     """
-    for post in r.subreddit('evaderstos').new(limit = 50) :
-        shadowban(post.author.name, submitters, r)
-        for comment in post.comments :
-            try :
-                shadowban(comment.author.name, submitters, r)
-            except AttributeError :
-                pass
+    pass
     
 def shadowban(user, submitters, r) :
     """
