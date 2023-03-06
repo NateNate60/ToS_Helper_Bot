@@ -179,8 +179,8 @@ def help_submission(s, body):
             else :
 
                 guilty_only = True
-                if ('*' == payload[1][0]) :
-                    payload[1] = payload[1][1:]
+                if ('*' in payload[1]) :
+                    payload[1] = payload[1][2:] if "\\" in payload[1] else payload[1][1:]
                     guilty_only = False
                 elif ("all" in payload) :
                     guilty_only = False
@@ -406,15 +406,15 @@ def process_pm(msg, r):
             msg.reply("Successfully shadowbanned.")
     try:
         # The bot will not check its own comments for triggers.
-        if msg.parent().author.name != session.user.me().name:
-            if msg.parent().id in get_comment_list():
+        if msg.author.name != session.user.me().name:
+            if msg.id in get_comment_list():
                 log.log("User", msg.author.name, "asked for an already processed submission to be processed")
             # We don't need to check for moderation triggers, since submissions to the subreddit we moderate have
             # already been checked before this function is used in the run_bot function.
             # A race condition might exist, but it would be extremely difficult to intentionally exploit.
-            help_submission(msg.parent(), msg.parent().body)
-            append_comment_list(msg.parent().id)
-    except AttributeError:
+            help_submission(msg, msg.body)
+            append_comment_list(msg.id)
+    except AttributeError :
         pass
 
 
