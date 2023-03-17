@@ -474,7 +474,7 @@ def get_comment_list():
     try:
         with open(path.join(wpath, "comments.txt"), "r+") as f:
             comments_replied_to = f.read().split("\n")
-            comments_replied_to = comments_replied_to[-500:]
+            comments_replied_to = comments_replied_to[-5000:]
             s = ""
             for i in comments_replied_to :
                 s += f"\n{i}"
