@@ -159,7 +159,7 @@ def help_submission(s, body):
                         " a lot more than evils." +
                         settings.signature)
 
-    if "!tb" in b or "!rep" in b:
+    if "!tb" in b or "!rep" in b or f == "ban or suspension" :
         log.log (s.author.name + " queried reports at " + s.id)
         append_comment_list(s.id)
         payload = b.split(' ')
@@ -358,7 +358,7 @@ def moderate_post(post):
                     log.log("Removed post by", post.author.name, "for rule 11 violation.")
                     post.reply("Unfortunately, your post has been removed because we require all winscreens to be accompanied by an interesting backstory. " +
                                "Simply making a comment anywhere on your post will satisfy this requirement. Once you've added a backstory, please send modmail" +
-                                " or mention u/NateNate60 to get your post restored." + settings.signature).mod.distinguish(sticky=True)
+                                " or mention NateNate60 to get your post restored." + settings.signature).mod.distinguish(sticky=True)
             else : raise RuleElevenTimer
 
 
