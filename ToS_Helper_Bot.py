@@ -227,7 +227,7 @@ def help_submission(s, body):
                     '[Here is a helpful guide made by /u/NateNate60, one of the Moderators for this subreddit]'
                     "(https://drive.google.com/file/d/1TC_hue8fEqH3xas2yMVU8KqQA-MovRZ-/view?usp=drivesdk),"
                     "and [here is another guide made by Chancell0r on the Forums]"
-                    "(https://blankmediagames.com/phpbb/viewtopic.php?f=3&t=73489&p=2399389). "
+                    "(https://townofsalem.io/phpbb/viewtopic.php?f=3&t=73489&p=2399389). "
                     "You should also check the sidebar of the subreddit for any other useful links, such as the "
                     '[Frequently Asked Questions](https://www.reddit.com/r/TownofSalemgame/wiki/faq)'
                     'and the ["Is is against the rules?"](https://www.redd.it/fucmif?sort=qa) thread.' +
@@ -235,7 +235,7 @@ def help_submission(s, body):
 
     if "pay" in b or "cost" in b or "free " in b or "free?" in b :
         log.log(s.author.name + " queried for Pay to Play")
-        s.reply("If you're asking about whether the game is still free to play, the developers [moved the game to Pay to Play](https://blankmediagames.com/phpbb/viewtopic.php?f=11&t=92848)" +
+        s.reply("If you're asking about whether the game is still free to play, the developers [moved the game to Pay to Play](https://townofsalem.io/phpbb/viewtopic.php?f=11&t=92848)" +
                 " in November of 2018 to combat a flood of people spamming meaningless messages in games and making new accounts to avoid bans. You can " +
                 "still play for free if you create an account before November of 2018. If you want to refer a friend, the referral code feature allows you to " +
                 "give then 5 free games. However, if they break the rules and get banned, you'll get a suspension as well! Only give codes to people you" +
@@ -265,19 +265,19 @@ def help_submission(s, body):
     if "crash" in b or "error" in b or "bug" in b or "glitch" in b or f == 'technical issue / bug':
         log.log(s.author.name + " queried for crashing.")
         s.reply("If you're talking about an error in the game, please be aware that the developers no longer check this subreddit." +
-                " Please send bug reports to the developers on the official Town of Salem forums.\n\n [General bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=10) \n\n [Mobile bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=60)" +
-                "\n\n [Steam bug reports](https://blankmediagames.com/phpbb/viewforum.php?f=78)" + settings.signature)
+                " Please send bug reports to the developers on the official Town of Salem forums.\n\n [General bug reports](https://townofsalem.io/phpbb/viewforum.php?f=10) \n\n [Mobile bug reports](https://townofsalem.io/phpbb/viewforum.php?f=60)" +
+                "\n\n [Steam bug reports](https://townofsalem.io/phpbb/viewforum.php?f=78)" + settings.signature)
 
     if 'log in' in b or 'login' in b or 'logging in' in b or 'password' in b :
         log.log(s.author.name + " queried for login issues")
-        s.reply("Are you having trouble logging into the game? Consider reading [this thread](https://www.blankmediagames.com/phpbb/viewtopic.php?f=11&t=105415&p=3342479#p3342479) on the Official Forums for help if your account was made" +
-                " before 2019. A password reset was required by BlankMediaGames for security reasons.\n\nHave you forgotten your password? You can [request a password reset here](https://www.blankmediagames.com/help/requestpasswordreset.php)." +
+        s.reply("Are you having trouble logging into the game? Consider reading [this thread](https://www.townofsalem.io/phpbb/viewtopic.php?f=11&t=105415&p=3342479#p3342479) on the Official Forums for help if your account was made" +
+                " before 2019. A password reset was required by BlankMediaGames for security reasons.\n\nHave you forgotten your password? You can [request a password reset here](https://www.townofsalem.io/help/requestpasswordreset.php)." +
                 "\n\nNeed more help? If we can't solve your problem, you should [send an email to the developers](mailto:support@blankmediagames.zendesk.com)" + settings.signature)
 
     if "trial" in b and 'sys' in b :
         log.log(s.author.name + " queried for the Trial System.")
         s.reply("If you're asking how the Trial System works, the Trial System is BlankMediaGame's system where regular Town of Salem players can help sort through reports and judge whether they are guilty or not. Anyone with more than "+
-                " 150 games played can vote on reports in the Trial System. [Click here to get to the Trial System](https://blankmediagames.com/Trial). If a majority of Jurors decide that a report is guilty, it will be refered to a Judge "+
+                " 150 games played can vote on reports in the Trial System. [Click here to get to the Trial System](https://townofsalem.io/Trial). If a majority of Jurors decide that a report is guilty, it will be refered to a Judge "+
                 "for final approval. If the judge decides that a penalty will be issued, then they can do so. For more questions, you can contact the Trial System administrator, [TurdPile](https://reddit.com/user/turdpile)." + settings.signature)
 
 
@@ -335,7 +335,7 @@ def moderate_post(post):
         post.reply("Hello! It appears you are asking about having to reset your Town of Salem password. This is because BMG has raised the minimum" +
                    " requirements for passwords so everyone has to set a new one. Your new password must contain:\n\n- At least 10 characters\n"+
                    "- Upper and lowercase letters\n- At least one number\n- A special character that isn't " + '"+", "\*", or "\^"\n\n' +
-                   "You can read the official BMG post on the official forums [here](https://www.blankmediagames.com/phpbb/viewtopic.php?f=11&t=113310)" + 
+                   "You can read the official BMG post on the official forums [here](https://www.townofsalem.io/phpbb/viewtopic.php?f=11&t=113310)" + 
                    settings.signature).mod.distinguish(sticky=True)
         post.mod.remove()
 
