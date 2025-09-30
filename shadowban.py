@@ -11,11 +11,17 @@ def getevaders(r, submitters) :
     
 def shadowban(user, submitters, r) :
     """
+    Originally used to suppress members of a gamethrowing clique known
+    as "the Church". They went away so this is no longer needed.
+
     Shadowban a user.
+
     :param user: the user 
     :param submitters: the SQLITE database of submitters
     :param r: the Reddit session
     """
+    return
+
     with submitters:
             cursor = submitters.execute("SELECT quantity FROM submitters WHERE username=?",
                                     (user.lower(), ))
