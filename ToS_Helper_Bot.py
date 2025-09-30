@@ -331,35 +331,30 @@ def moderate_post(post):
     :param post: the post to check.
     :return: None.
     """
-    if "password" in post.title.lower() :
-        post.reply("Hello! It appears you are asking about having to reset your Town of Salem password. This is because BMG has raised the minimum" +
-                   " requirements for passwords so everyone has to set a new one. Your new password must contain:\n\n- At least 10 characters\n"+
-                   "- Upper and lowercase letters\n- At least one number\n- A special character that isn't " + '"+", "\*", or "\^"\n\n' +
-                   "You can read the official BMG post on the official forums [here](https://www.townofsalem.io/phpbb/viewtopic.php?f=11&t=113310)" + 
-                   settings.signature).mod.distinguish(sticky=True)
-        post.mod.remove()
-
-    if post.link_flair_text == "Win Screen" and len(post.title) < 50:
+    if "Win Screen" in post.link_flair_text and len(post.title) < 50:
         if post.created_utc > int(time.time()) - 5 :
             post.author.message("Rule 11 reminder","This is an automated message to remind you that we require all win screen posts to be accompanied by a backstory. Your post hasn't been removed, but it will be" +
-                                " automatically removed in 30 minutes if you don't add a backstory. " +
+                                " automatically removed in 2 hours if you don't add a backstory. " +
                                 "If you submitted the post as a text post, please add a short backstory in the post. Or, you can comment your backstory anywhere in your post.\n\n"
                                 "[Link to your post](" + post.permalink + ")")
             raise RuleElevenTimer
         else :
-            if post.created_utc < int(time.time()) - 1800 :
+            if post.created_utc < int(time.time()) - 7200 :
                 ok = False
                 for comment in post.comments :
                     if comment.author.name == post.author.name :
-                        ok = True; break
-                if len(post.selftext) > 100 : ok = True
+                        ok = True
+                        break
+                if len(post.selftext) > 100 :
+                    ok = True
                 if not ok:
                     post.mod.remove()
                     log.log("Removed post by", post.author.name, "for rule 11 violation.")
                     post.reply("Unfortunately, your post has been removed because we require all winscreens to be accompanied by an interesting backstory. " +
-                               "Simply making a comment anywhere on your post will satisfy this requirement. Once you've added a backstory, please send modmail" +
-                                " or mention NateNate60 to get your post restored." + settings.signature).mod.distinguish(sticky=True)
-            else : raise RuleElevenTimer
+                               "Simply making a comment anywhere on your post will satisfy this requirement. Once you've added a backstory, please send modmail " +
+                                "to get your post restored." + settings.signature).mod.distinguish(sticky=True)
+            else :
+                raise RuleElevenTimer
 
 
     try : check_author(post)
